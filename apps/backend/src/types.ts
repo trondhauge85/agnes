@@ -55,6 +55,25 @@ export type FamilyTodo = {
   updatedAt: string;
 };
 
+export type FamilyMealType = "breakfast" | "lunch" | "dinner" | "snack";
+
+export type FamilyMealStatus = "planned" | "cooked" | "cancelled";
+
+export type FamilyMeal = {
+  id: string;
+  familyId: string;
+  title: string;
+  notes?: string;
+  status: FamilyMealStatus;
+  mealType: FamilyMealType;
+  scheduledFor?: string;
+  servings?: number;
+  recipeUrl?: string;
+  assignedToUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type FamilyCreatePayload = {
   name: string;
   pictureUrl: string;
@@ -89,6 +108,28 @@ export type FamilyTodoUpdatePayload = {
   title?: string;
   notes?: string | null;
   status?: FamilyTodoStatus;
+  assignedToUserId?: string | null;
+};
+
+export type FamilyMealCreatePayload = {
+  title: string;
+  notes?: string;
+  status?: FamilyMealStatus;
+  mealType?: FamilyMealType;
+  scheduledFor?: string;
+  servings?: number;
+  recipeUrl?: string;
+  assignedToUserId?: string | null;
+};
+
+export type FamilyMealUpdatePayload = {
+  title?: string;
+  notes?: string | null;
+  status?: FamilyMealStatus;
+  mealType?: FamilyMealType;
+  scheduledFor?: string | null;
+  servings?: number | null;
+  recipeUrl?: string | null;
   assignedToUserId?: string | null;
 };
 
