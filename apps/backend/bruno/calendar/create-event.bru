@@ -1,0 +1,36 @@
+meta {
+  name: Create Event
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/calendar/events?provider={{calendarProvider}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "title": "Planning session",
+  "description": "Discuss weekly priorities",
+  "start": {
+    "dateTime": "2024-01-20T09:00:00.000Z",
+    "timeZone": "UTC"
+  },
+  "end": {
+    "dateTime": "2024-01-20T09:30:00.000Z",
+    "timeZone": "UTC"
+  },
+  "location": {
+    "name": "Zoom"
+  },
+  "participants": [
+    {
+      "email": "host@example.com",
+      "displayName": "Host"
+    }
+  ],
+  "tags": ["planning"]
+}

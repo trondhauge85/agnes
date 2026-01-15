@@ -1,0 +1,18 @@
+meta {
+  name: Select Calendar
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/calendar/select
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "provider": "{{calendarProvider}}",
+  "calendarId": "{{calendarId}}"
+}

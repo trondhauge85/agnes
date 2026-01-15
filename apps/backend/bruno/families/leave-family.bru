@@ -1,0 +1,17 @@
+meta {
+  name: Leave Family
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/families/{{familyId}}/leave
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "userId": "{{memberUserId}}"
+}

@@ -1,0 +1,18 @@
+meta {
+  name: Email Start
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/auth/email/start
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "email": "test@example.com",
+  "action": "login"
+}

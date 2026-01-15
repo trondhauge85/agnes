@@ -1,0 +1,18 @@
+meta {
+  name: Email Verify
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/auth/email/verify
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "email": "test@example.com",
+  "code": "000000"
+}

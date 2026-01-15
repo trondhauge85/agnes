@@ -1,0 +1,19 @@
+meta {
+  name: Update Event
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/calendar/events/{{eventId}}?provider={{calendarProvider}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "title": "Updated planning session",
+  "description": "Agenda finalized",
+  "tags": ["planning", "updated"]
+}
