@@ -136,7 +136,7 @@ export const HomePage = () => {
   };
 
   return (
-    <Box sx={{ backgroundColor: "background.default", minHeight: "100vh" }}>
+    <Box sx={{ backgroundColor: "background.default", minHeight: "100%" }}>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: "1px solid #e2e8f0" }}>
         <Toolbar sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center">
