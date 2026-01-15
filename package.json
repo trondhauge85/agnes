@@ -1,0 +1,15 @@
+{
+  "name": "agnes",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "infra/*"
+  ],
+  "scripts": {
+    "lint": "echo 'linting not yet configured'",
+    "format": "echo 'formatting not yet configured'",
+    "typecheck": "echo 'typecheck not yet configured'"
+  }
+}
