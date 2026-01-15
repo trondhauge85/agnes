@@ -3,17 +3,25 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo 'frontend dev server to be added'",
-    "build": "echo 'frontend build to be added'",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@mui/material": "^5.16.7",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.27.0",
+    "styled-components": "^6.1.13"
   },
   "devDependencies": {
+    "@mui/styled-engine-sc": "^5.16.7",
     "@types/react": "^18.3.9",
     "@types/react-dom": "^18.3.0",
-    "typescript": "^5.6.3"
+    "@types/styled-components": "^5.1.34",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
   }
 }
