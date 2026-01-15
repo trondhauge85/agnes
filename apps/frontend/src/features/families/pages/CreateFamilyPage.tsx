@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "
 import styled from "styled-components";
 
 import { createFamily } from "../services/familyApi";
+import { saveFamily } from "../services/familyStorage";
 
 const PageShell = styled.main`
   min-height: 100vh;
@@ -157,6 +158,7 @@ export const CreateFamilyPage = () => {
         },
       });
 
+      saveFamily(response.family);
       setSuccessMessage(`Family created! You can invite everyone with code ${response.family.id}.`);
       setFamilyName("");
       setDisplayName("");

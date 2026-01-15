@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 
 import { joinFamily } from "../services/familyApi";
+import { saveFamily } from "../../families/services/familyStorage";
 
 type FormState = {
   familyId: string;
@@ -101,6 +102,7 @@ export const AddFamilyMemberPage = () => {
         addedByUserId: form.addedByUserId,
       });
 
+      saveFamily(response.family);
       const joinedName = response.member?.displayName ?? form.displayName;
       setSuccessMessage(`Added ${joinedName} to ${response.family.name}.`);
       setForm((prev) => ({
