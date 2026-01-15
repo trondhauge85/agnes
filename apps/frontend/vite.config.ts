@@ -8,4 +8,8 @@ export default defineConfig({
       "@mui/styled-engine": "@mui/styled-engine-sc",
     },
   },
+  test: {
+    environment: "jsdom",
+    setupFiles: [],
+  },
 });
