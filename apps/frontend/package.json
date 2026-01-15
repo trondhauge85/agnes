@@ -1,0 +1,19 @@
+{
+  "name": "@agnes/frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'frontend dev server to be added'",
+    "build": "echo 'frontend build to be added'",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.9",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.6.3"
+  }
+}
