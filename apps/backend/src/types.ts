@@ -64,3 +64,108 @@ export type FamilyJoinPayload = {
 export type FamilyLeavePayload = {
   userId: string;
 };
+
+export type CalendarProvider = "google";
+
+export type CalendarConnection = {
+  provider: CalendarProvider;
+  status: "connected" | "disconnected";
+  accessToken?: string;
+  refreshToken?: string;
+  scopes: string[];
+  connectedAt: string;
+  userEmail?: string;
+};
+
+export type CalendarInfo = {
+  id: string;
+  name: string;
+  description?: string;
+  timezone: string;
+  primary: boolean;
+  createdAt: string;
+  provider: CalendarProvider;
+};
+
+export type CalendarParticipantStatus = "needs_action" | "accepted" | "declined";
+
+export type CalendarParticipant = {
+  email: string;
+  displayName?: string;
+  status: CalendarParticipantStatus;
+  organizer?: boolean;
+};
+
+export type CalendarLocation = {
+  name: string;
+  address?: string;
+  meetingUrl?: string;
+};
+
+export type CalendarEventDateTime = {
+  dateTime: string;
+  timeZone?: string;
+};
+
+export type CalendarEvent = {
+  id: string;
+  calendarId: string;
+  providerEventId?: string;
+  title: string;
+  description?: string;
+  location?: CalendarLocation;
+  start: CalendarEventDateTime;
+  end: CalendarEventDateTime;
+  status: "confirmed" | "tentative" | "cancelled";
+  participants: CalendarParticipant[];
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CalendarSetupPayload = {
+  provider: CalendarProvider;
+  authorizationCode?: string;
+  redirectUri?: string;
+};
+
+export type CalendarSelectPayload = {
+  provider: CalendarProvider;
+  calendarId?: string;
+  name?: string;
+  timezone?: string;
+  description?: string;
+  primary?: boolean;
+};
+
+export type CalendarEventCreatePayload = {
+  title: string;
+  description?: string;
+  start: CalendarEventDateTime;
+  end: CalendarEventDateTime;
+  location?: CalendarLocation;
+  participants?: CalendarParticipant[];
+  status?: "confirmed" | "tentative" | "cancelled";
+  tags?: string[];
+};
+
+export type CalendarEventUpdatePayload = {
+  title?: string;
+  description?: string;
+  start?: CalendarEventDateTime;
+  end?: CalendarEventDateTime;
+  location?: CalendarLocation;
+  participants?: CalendarParticipant[];
+  status?: "confirmed" | "tentative" | "cancelled";
+  tags?: string[];
+};
+
+export type CalendarEventListFilters = {
+  start?: string;
+  end?: string;
+  participant?: string;
+  status?: "confirmed" | "tentative" | "cancelled";
+  tag?: string;
+  search?: string;
+  limit?: number;
+};

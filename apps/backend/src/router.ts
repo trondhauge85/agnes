@@ -5,6 +5,16 @@ import {
   handleProviders
 } from "./handlers/auth";
 import {
+  handleCalendarEventCreate,
+  handleCalendarEventDelete,
+  handleCalendarEventList,
+  handleCalendarEventUpdate,
+  handleCalendarList,
+  handleCalendarProviders,
+  handleCalendarSelect,
+  handleCalendarSetup
+} from "./handlers/calendar";
+import {
   handleFamilyCreate,
   handleFamilyJoin,
   handleFamilyLeave
@@ -33,6 +43,41 @@ export const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "POST" && pathname === "/auth/email/verify") {
     return handleEmailVerify(request);
+  }
+
+  if (request.method === "GET" && pathname === "/calendar/providers") {
+    return handleCalendarProviders();
+  }
+
+  if (request.method === "POST" && pathname === "/calendar/setup") {
+    return handleCalendarSetup(request);
+  }
+
+  if (request.method === "GET" && pathname === "/calendar") {
+    return handleCalendarList(request);
+  }
+
+  if (request.method === "POST" && pathname === "/calendar/select") {
+    return handleCalendarSelect(request);
+  }
+
+  if (request.method === "GET" && pathname === "/calendar/events") {
+    return handleCalendarEventList(request);
+  }
+
+  if (request.method === "POST" && pathname === "/calendar/events") {
+    return handleCalendarEventCreate(request);
+  }
+
+  const calendarEventMatch = pathname.match(/^\/calendar\/events\/([^/]+)$/);
+  if (calendarEventMatch) {
+    if (request.method === "PATCH") {
+      return handleCalendarEventUpdate(request, calendarEventMatch[1]);
+    }
+
+    if (request.method === "DELETE") {
+      return handleCalendarEventDelete(request, calendarEventMatch[1]);
+    }
   }
 
   if (request.method === "POST" && pathname === "/families") {
