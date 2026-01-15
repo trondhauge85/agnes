@@ -1,6 +1,7 @@
 import { createBrowserRouter, redirect } from "react-router-dom";
 
 import { LoginPage } from "../features/auth/pages/LoginPage";
+import { AddFamilyMemberPage } from "../features/family/pages/AddFamilyMemberPage";
 import { CreateFamilyPage } from "../features/families/pages/CreateFamilyPage";
 import { getSession } from "../features/auth/services/authStorage";
 
@@ -22,6 +23,18 @@ export const router = createBrowserRouter([
   },
   {
     path: "/app",
+    loader: () => redirect("/app/family/add"),
+  },
+  {
+    path: "/app/family/add",
+    loader: () => {
+      const session = getSession();
+      if (!session) {
+        return redirect("/login");
+      }
+      return null;
+    },
+    element: <AddFamilyMemberPage />,
     loader: () => redirect("/app/create-family"),
   },
   {
