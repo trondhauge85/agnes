@@ -1,6 +1,7 @@
 import { createBrowserRouter, redirect } from "react-router-dom";
 
 import { LoginPage } from "../features/auth/pages/LoginPage";
+import { AddFamilyMemberPage } from "../features/family/pages/AddFamilyMemberPage";
 import { getSession } from "../features/auth/services/authStorage";
 
 export const router = createBrowserRouter([
@@ -21,11 +22,17 @@ export const router = createBrowserRouter([
   },
   {
     path: "/app",
-    element: (
-      <main style={{ padding: "2rem", fontFamily: "Inter, sans-serif" }}>
-        <h1>Welcome to Agnes</h1>
-        <p>Authenticated routes will live here.</p>
-      </main>
-    ),
+    loader: () => redirect("/app/family/add"),
+  },
+  {
+    path: "/app/family/add",
+    loader: () => {
+      const session = getSession();
+      if (!session) {
+        return redirect("/login");
+      }
+      return null;
+    },
+    element: <AddFamilyMemberPage />,
   },
 ]);
