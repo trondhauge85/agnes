@@ -19,13 +19,52 @@ type EmailVerifyPayload = {
   code: string;
 };
 
+type FamilyRole = "owner" | "admin" | "member";
+
+type FamilyMember = {
+  userId: string;
+  displayName: string;
+  role: FamilyRole;
+  joinedAt: string;
+};
+
+type Family = {
+  id: string;
+  name: string;
+  pictureUrl: string;
+  createdAt: string;
+  members: FamilyMember[];
+};
+
+type FamilyCreatePayload = {
+  name: string;
+  pictureUrl: string;
+  creator: {
+    userId: string;
+    displayName: string;
+  };
+};
+
+type FamilyJoinPayload = {
+  userId: string;
+  displayName: string;
+  addedByUserId: string;
+};
+
+type FamilyLeavePayload = {
+  userId: string;
+};
+
 const oauthProviders: OAuthProvider[] = ["apple", "google", "facebook"];
 const emailActions: EmailAction[] = ["login", "signup"];
+const familyRoles: FamilyRole[] = ["owner", "admin", "member"];
 
 const jsonHeaders = {
   "cache-control": "no-store",
   "content-type": "application/json"
 };
+
+const families = new Map<string, Family>();
 
 const createJsonResponse = (payload: unknown, status = 200): Response =>
   new Response(JSON.stringify(payload, null, 2), {
@@ -44,6 +83,24 @@ const parseJsonBody = async <T>(request: Request): Promise<T | null> => {
 
   return (await request.json()) as T;
 };
+
+const normalizeString = (value: string): string => value.trim();
+
+const findFamily = (familyId: string): Family | null =>
+  families.get(familyId) ?? null;
+
+const getMemberById = (
+  family: Family,
+  userId: string
+): FamilyMember | undefined => family.members.find((member) => member.userId === userId);
+
+const canAddMembers = (role: FamilyRole): boolean =>
+  role === "owner" || role === "admin";
+
+const serializeFamily = (family: Family): Family => ({
+  ...family,
+  members: [...family.members]
+});
 
 const handleRoot = (pathname: string): Response =>
   createJsonResponse({
@@ -175,6 +232,180 @@ const handleEmailVerify = async (request: Request): Promise<Response> => {
   });
 };
 
+const handleFamilyCreate = async (request: Request): Promise<Response> => {
+  const body = await parseJsonBody<FamilyCreatePayload>(request);
+  if (!body) {
+    return createJsonResponse(
+      { error: "Expected application/json payload." },
+      400
+    );
+  }
+
+  const name = normalizeString(body.name ?? "");
+  const pictureUrl = normalizeString(body.pictureUrl ?? "");
+  const creatorId = normalizeString(body.creator?.userId ?? "");
+  const creatorName = normalizeString(body.creator?.displayName ?? "");
+
+  if (!name) {
+    return createJsonResponse({ error: "Family name is required." }, 400);
+  }
+
+  if (!pictureUrl) {
+    return createJsonResponse({ error: "Family pictureUrl is required." }, 400);
+  }
+
+  if (!creatorId || !creatorName) {
+    return createJsonResponse(
+      { error: "creator.userId and creator.displayName are required." },
+      400
+    );
+  }
+
+  const now = new Date().toISOString();
+  const family: Family = {
+    id: crypto.randomUUID(),
+    name,
+    pictureUrl,
+    createdAt: now,
+    members: [
+      {
+        userId: creatorId,
+        displayName: creatorName,
+        role: "owner",
+        joinedAt: now
+      }
+    ]
+  };
+
+  families.set(family.id, family);
+
+  return createJsonResponse({
+    status: "created",
+    family: serializeFamily(family),
+    roles: familyRoles,
+    message:
+      "Family created. Use the join endpoint with an admin/owner to add more members."
+  });
+};
+
+const handleFamilyJoin = async (
+  request: Request,
+  familyId: string
+): Promise<Response> => {
+  const family = findFamily(familyId);
+  if (!family) {
+    return createJsonResponse({ error: "Family not found." }, 404);
+  }
+
+  const body = await parseJsonBody<FamilyJoinPayload>(request);
+  if (!body) {
+    return createJsonResponse(
+      { error: "Expected application/json payload." },
+      400
+    );
+  }
+
+  const userId = normalizeString(body.userId ?? "");
+  const displayName = normalizeString(body.displayName ?? "");
+  const addedByUserId = normalizeString(body.addedByUserId ?? "");
+
+  if (!userId || !displayName || !addedByUserId) {
+    return createJsonResponse(
+      {
+        error:
+          "userId, displayName, and addedByUserId are required to join a family."
+      },
+      400
+    );
+  }
+
+  const addedByMember = getMemberById(family, addedByUserId);
+  if (!addedByMember || !canAddMembers(addedByMember.role)) {
+    return createJsonResponse(
+      { error: "Only owners or admins can add family members." },
+      403
+    );
+  }
+
+  const existingMember = getMemberById(family, userId);
+  if (existingMember) {
+    return createJsonResponse({
+      status: "already_member",
+      family: serializeFamily(family),
+      member: existingMember
+    });
+  }
+
+  const now = new Date().toISOString();
+  const newMember: FamilyMember = {
+    userId,
+    displayName,
+    role: "member",
+    joinedAt: now
+  };
+  family.members.push(newMember);
+
+  return createJsonResponse({
+    status: "joined",
+    family: serializeFamily(family),
+    member: newMember,
+    addedBy: {
+      userId: addedByMember.userId,
+      role: addedByMember.role
+    }
+  });
+};
+
+const handleFamilyLeave = async (
+  request: Request,
+  familyId: string
+): Promise<Response> => {
+  const family = findFamily(familyId);
+  if (!family) {
+    return createJsonResponse({ error: "Family not found." }, 404);
+  }
+
+  const body = await parseJsonBody<FamilyLeavePayload>(request);
+  if (!body) {
+    return createJsonResponse(
+      { error: "Expected application/json payload." },
+      400
+    );
+  }
+
+  const userId = normalizeString(body.userId ?? "");
+  if (!userId) {
+    return createJsonResponse({ error: "userId is required to leave." }, 400);
+  }
+
+  const member = getMemberById(family, userId);
+  if (!member) {
+    return createJsonResponse(
+      { error: "Member not found in family." },
+      404
+    );
+  }
+
+  if (member.role === "owner") {
+    const ownerCount = family.members.filter((item) => item.role === "owner")
+      .length;
+    if (ownerCount <= 1) {
+      return createJsonResponse(
+        { error: "Families must have at least one owner." },
+        400
+      );
+    }
+  }
+
+  family.members = family.members.filter((item) => item.userId !== userId);
+
+  return createJsonResponse({
+    status: "left",
+    family: serializeFamily(family),
+    removedMember: member
+  });
+};
+
 const notFound = (pathname: string): Response =>
   createJsonResponse(
     {
@@ -206,6 +437,20 @@ export const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "POST" && pathname === "/auth/email/verify") {
     return handleEmailVerify(request);
+  }
+
+  if (request.method === "POST" && pathname === "/families") {
+    return handleFamilyCreate(request);
+  }
+
+  const familyJoinMatch = pathname.match(/^\/families\/([^/]+)\/join$/);
+  if (request.method === "POST" && familyJoinMatch) {
+    return handleFamilyJoin(request, familyJoinMatch[1]);
+  }
+
+  const familyLeaveMatch = pathname.match(/^\/families\/([^/]+)\/leave$/);
+  if (request.method === "POST" && familyLeaveMatch) {
+    return handleFamilyLeave(request, familyLeaveMatch[1]);
   }
 
   return notFound(pathname);
