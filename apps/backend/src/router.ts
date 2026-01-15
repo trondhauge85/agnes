@@ -19,6 +19,12 @@ import {
   handleFamilyJoin,
   handleFamilyLeave
 } from "./handlers/families";
+import {
+  handleFamilyTodoCreate,
+  handleFamilyTodoDelete,
+  handleFamilyTodoList,
+  handleFamilyTodoUpdate
+} from "./handlers/familyTodos";
 import { handleRoot, notFound } from "./handlers/root";
 
 export const handler = async (request: Request): Promise<Response> => {
@@ -92,6 +98,32 @@ export const handler = async (request: Request): Promise<Response> => {
   const familyLeaveMatch = pathname.match(/^\/families\/([^/]+)\/leave$/);
   if (request.method === "POST" && familyLeaveMatch) {
     return handleFamilyLeave(request, familyLeaveMatch[1]);
+  }
+
+  const familyTodosMatch = pathname.match(/^\/families\/([^/]+)\/todos$/);
+  if (familyTodosMatch) {
+    if (request.method === "GET") {
+      return handleFamilyTodoList(familyTodosMatch[1]);
+    }
+    if (request.method === "POST") {
+      return handleFamilyTodoCreate(request, familyTodosMatch[1]);
+    }
+  }
+
+  const familyTodoMatch = pathname.match(
+    /^\/families\/([^/]+)\/todos\/([^/]+)$/
+  );
+  if (familyTodoMatch) {
+    if (request.method === "PATCH") {
+      return handleFamilyTodoUpdate(
+        request,
+        familyTodoMatch[1],
+        familyTodoMatch[2]
+      );
+    }
+    if (request.method === "DELETE") {
+      return handleFamilyTodoDelete(familyTodoMatch[1], familyTodoMatch[2]);
+    }
   }
 
   return notFound(pathname);
