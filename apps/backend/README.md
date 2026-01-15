@@ -55,3 +55,10 @@ Provide the following environment variables to enable the integration:
 
 The client must be configured in Google Cloud Console with the redirect URI you
 pass to `POST /calendar/setup` so the authorization code exchange succeeds.
+
+## Bruno collection
+
+The Bruno collection lives in `apps/backend/bruno` and mirrors the handler
+domains (root, auth, families, calendar). Start the backend locally and point
+the `local` environment `baseUrl` to the running host before exercising the
+requests.

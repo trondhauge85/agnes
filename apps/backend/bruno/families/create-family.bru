@@ -1,0 +1,26 @@
+meta {
+  name: Create Family
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/families
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "name": "The Parkers",
+  "pictureUrl": "https://example.com/family.png",
+  "creator": {
+    "userId": "owner-001",
+    "displayName": "Jordan Parker"
+  },
+  "metadata": {
+    "interests": ["travel", "soccer"],
+    "goals": ["weekly check-in"]
+  }
+}

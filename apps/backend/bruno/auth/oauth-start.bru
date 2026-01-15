@@ -1,0 +1,19 @@
+meta {
+  name: OAuth Start
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/auth/oauth/start
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "provider": "google",
+  "redirectUri": "{{redirectUri}}",
+  "state": "state-demo"
+}

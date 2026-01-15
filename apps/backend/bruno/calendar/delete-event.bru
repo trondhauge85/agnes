@@ -1,0 +1,9 @@
+meta {
+  name: Delete Event
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/calendar/events/{{eventId}}?provider={{calendarProvider}}
+}
