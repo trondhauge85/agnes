@@ -42,6 +42,19 @@ export type Family = {
   members: FamilyMember[];
 };
 
+export type FamilyTodoStatus = "open" | "completed";
+
+export type FamilyTodo = {
+  id: string;
+  familyId: string;
+  title: string;
+  notes?: string;
+  status: FamilyTodoStatus;
+  assignedToUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type FamilyCreatePayload = {
   name: string;
   pictureUrl: string;
@@ -63,6 +76,20 @@ export type FamilyJoinPayload = {
 
 export type FamilyLeavePayload = {
   userId: string;
+};
+
+export type FamilyTodoCreatePayload = {
+  title: string;
+  notes?: string;
+  status?: FamilyTodoStatus;
+  assignedToUserId?: string | null;
+};
+
+export type FamilyTodoUpdatePayload = {
+  title?: string;
+  notes?: string | null;
+  status?: FamilyTodoStatus;
+  assignedToUserId?: string | null;
 };
 
 export type CalendarProvider = "google";

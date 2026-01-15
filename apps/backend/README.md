@@ -31,6 +31,13 @@ established.
 - `PATCH /calendar/events/:id`: update an event.
 - `DELETE /calendar/events/:id`: delete an event.
 
+## Family todo endpoints
+
+- `GET /families/:id/todos`: list shared todos for a family.
+- `POST /families/:id/todos`: create a shared todo (optionally assign to a member).
+- `PATCH /families/:id/todos/:todoId`: update a shared todo (status, title, notes, assignment).
+- `DELETE /families/:id/todos/:todoId`: remove a shared todo.
+
 ## Extension guidelines
 
 - Add new endpoints by creating a handler in `src/handlers/` and wiring it in
