@@ -2,10 +2,24 @@
 
 Purpose: React UI for the assistant experience.
 
-Key files:
-- `src/App.tsx`: app shell.
-- `src/main.tsx`: React entry point.
+## Architecture
 
-Next steps:
-- Choose app tooling (Vite, Remix, Next.js) and add config.
-- Introduce design system and routing.
+- **Tooling:** Vite SPA + React + TypeScript.
+- **UI system:** Material UI with `styled-components` styling engine.
+- **Routing:** React Router with loaders.
+- **Feature organization:** `src/features/<feature>`.
+- **Shared API:** `src/shared/api` for OpenAPI-generated clients and shared helpers.
+
+## Key files
+
+- `index.html`: Vite entry HTML.
+- `src/main.tsx`: React entry point.
+- `src/app/App.tsx`: App providers and router.
+- `src/app/router.tsx`: Route definitions + loaders.
+- `src/features/auth`: Login screen and session helpers.
+
+## Local development
+
+```bash
+pnpm --filter @agnes/frontend dev
+```
