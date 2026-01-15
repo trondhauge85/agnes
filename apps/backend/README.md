@@ -16,11 +16,13 @@ The backend is split by responsibility so new features are easy to extend:
 ## Calendar endpoints
 
 The calendar routes provide a provider-agnostic REST surface while using Google
-Calendar as the initial backing store.
+Calendar as the initial backing store. The backend now uses the official
+Google Calendar API to list calendars and manage events once a connection is
+established.
 
 - `GET /calendar/providers`: list supported providers.
 - `POST /calendar/setup`: exchange a Google OIDC authorization code for a
-  connection (mocked in-memory for now).
+  connection and store refresh/access tokens in memory.
 - `GET /calendar`: list calendars for a provider.
 - `POST /calendar/select`: create or select a calendar as the active one.
 - `GET /calendar/events`: list events with filters (date range, participant,
@@ -43,3 +45,13 @@ Calendar as the initial backing store.
 
 - Add routing, adapters, and configuration.
 - Introduce runtime-specific adapters (Cloudflare, Node, edge).
+
+## Google Calendar configuration
+
+Provide the following environment variables to enable the integration:
+
+- `GOOGLE_CLIENT_ID`: OAuth 2.0 client ID.
+- `GOOGLE_CLIENT_SECRET`: OAuth 2.0 client secret.
+
+The client must be configured in Google Cloud Console with the redirect URI you
+pass to `POST /calendar/setup` so the authorization code exchange succeeds.

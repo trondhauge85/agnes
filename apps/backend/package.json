@@ -7,7 +7,9 @@
     "build": "echo 'build pipeline to be added'",
     "typecheck": "tsc -p tsconfig.json"
   },
-  "dependencies": {},
+  "dependencies": {
+    "googleapis": "^140.0.0"
+  },
   "devDependencies": {
     "@types/node": "^22.7.5",
     "typescript": "^5.6.3"
