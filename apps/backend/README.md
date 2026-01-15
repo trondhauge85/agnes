@@ -13,6 +13,22 @@ The backend is split by responsibility so new features are easy to extend:
 - `src/utils/`: cross-cutting helpers for HTTP and string normalization.
 - `src/types.ts`: shared domain types and payload definitions.
 
+## Calendar endpoints
+
+The calendar routes provide a provider-agnostic REST surface while using Google
+Calendar as the initial backing store.
+
+- `GET /calendar/providers`: list supported providers.
+- `POST /calendar/setup`: exchange a Google OIDC authorization code for a
+  connection (mocked in-memory for now).
+- `GET /calendar`: list calendars for a provider.
+- `POST /calendar/select`: create or select a calendar as the active one.
+- `GET /calendar/events`: list events with filters (date range, participant,
+  status, tags, search, limit).
+- `POST /calendar/events`: create an event in the selected calendar.
+- `PATCH /calendar/events/:id`: update an event.
+- `DELETE /calendar/events/:id`: delete an event.
+
 ## Extension guidelines
 
 - Add new endpoints by creating a handler in `src/handlers/` and wiring it in
