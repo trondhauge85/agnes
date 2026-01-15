@@ -28,11 +28,17 @@ type FamilyMember = {
   joinedAt: string;
 };
 
+type FamilyMetadata = {
+  interests: string[];
+  goals: string[];
+};
+
 type Family = {
   id: string;
   name: string;
   pictureUrl: string;
   createdAt: string;
+  metadata: FamilyMetadata;
   members: FamilyMember[];
 };
 
@@ -42,6 +48,10 @@ type FamilyCreatePayload = {
   creator: {
     userId: string;
     displayName: string;
+  };
+  metadata?: {
+    interests?: string[];
+    goals?: string[];
   };
 };
 
@@ -85,6 +95,9 @@ const parseJsonBody = async <T>(request: Request): Promise<T | null> => {
 };
 
 const normalizeString = (value: string): string => value.trim();
+
+const normalizeStringArray = (values: string[] | undefined): string[] =>
+  (values ?? []).map((value) => normalizeString(value)).filter(Boolean);
 
 const findFamily = (familyId: string): Family | null =>
   families.get(familyId) ?? null;
@@ -245,6 +258,10 @@ const handleFamilyCreate = async (request: Request): Promise<Response> => {
   const pictureUrl = normalizeString(body.pictureUrl ?? "");
   const creatorId = normalizeString(body.creator?.userId ?? "");
   const creatorName = normalizeString(body.creator?.displayName ?? "");
+  const metadata: FamilyMetadata = {
+    interests: normalizeStringArray(body.metadata?.interests),
+    goals: normalizeStringArray(body.metadata?.goals)
+  };
 
   if (!name) {
     return createJsonResponse({ error: "Family name is required." }, 400);
@@ -267,6 +284,7 @@ const handleFamilyCreate = async (request: Request): Promise<Response> => {
     name,
     pictureUrl,
     createdAt: now,
+    metadata,
     members: [
       {
         userId: creatorId,
