@@ -12,17 +12,21 @@ import type {
 } from "../types";
 import {
   connectCalendarProvider,
-  deleteEvent,
-  getCalendarById,
   getCalendarConnection,
-  getEvent,
   getSelectedCalendarId,
-  listCalendars,
-  listEvents,
-  saveCalendar,
-  saveEvent,
   setSelectedCalendar
 } from "../data/calendar";
+import {
+  GoogleCalendarConfigError,
+  createGoogleCalendar,
+  createGoogleEvent,
+  deleteGoogleEvent,
+  exchangeGoogleAuthorizationCode,
+  getGoogleCalendar,
+  listGoogleCalendars,
+  listGoogleEvents,
+  updateGoogleEvent
+} from "../integrations/googleCalendar";
 import { createJsonResponse, parseJsonBody } from "../utils/http";
 import { normalizeString } from "../utils/strings";
 
@@ -179,23 +183,21 @@ export const handleCalendarSetup = async (
     );
   }
 
-  const connection: CalendarConnection = {
-    provider,
-    status: "connected",
-    accessToken: `mock-access-${crypto.randomUUID()}`,
-    refreshToken: `mock-refresh-${crypto.randomUUID()}`,
-    scopes: ["openid", "email", "profile", "calendar.readwrite"],
-    connectedAt: new Date().toISOString(),
-    userEmail: "family@example.com"
-  };
+  try {
+    const { connection } = await exchangeGoogleAuthorizationCode(
+      body.authorizationCode,
+      body.redirectUri
+    );
+    connectCalendarProvider(provider, connection);
 
-  connectCalendarProvider(provider, connection);
-
-  return createJsonResponse({
-    status: "connected",
-    provider,
-    connection
-  });
+    return createJsonResponse({
+      status: "connected",
+      provider,
+      connection
+    });
+  } catch (error) {
+    return createCalendarErrorResponse(error);
+  }
 };
 
 export const handleCalendarList = async (
@@ -216,12 +218,16 @@ export const handleCalendarList = async (
     );
   }
 
-  const calendars = listCalendars(provider);
-  return createJsonResponse({
-    provider,
-    calendars,
-    selectedCalendarId: getSelectedCalendarId(provider)
-  });
+  try {
+    const calendars = await listGoogleCalendars(connection);
+    return createJsonResponse({
+      provider,
+      calendars,
+      selectedCalendarId: getSelectedCalendarId(provider)
+    });
+  } catch (error) {
+    return createCalendarErrorResponse(error);
+  }
 };
 
 export const handleCalendarSelect = async (
@@ -248,42 +254,38 @@ export const handleCalendarSelect = async (
     );
   }
 
-  const now = new Date().toISOString();
   let calendar: CalendarInfo | null = null;
 
-  if (body.calendarId) {
-    calendar = getCalendarById(provider, body.calendarId);
-    if (!calendar) {
-      return createJsonResponse({ error: "Calendar not found." }, 404);
-    }
-  } else {
-    const name = normalizeString(body.name ?? "");
-    if (!name) {
-      return createJsonResponse(
-        { error: "calendarId or name is required." },
-        400
+  try {
+    if (body.calendarId) {
+      calendar = await getGoogleCalendar(connection, body.calendarId);
+    } else {
+      const name = normalizeString(body.name ?? "");
+      if (!name) {
+        return createJsonResponse(
+          { error: "calendarId or name is required." },
+          400
+        );
+      }
+
+      calendar = await createGoogleCalendar(
+        connection,
+        name,
+        normalizeString(body.description ?? "") || undefined,
+        normalizeString(body.timezone ?? "UTC")
       );
     }
 
-    calendar = {
-      id: crypto.randomUUID(),
-      name,
-      description: normalizeString(body.description ?? "") || undefined,
-      timezone: normalizeString(body.timezone ?? "UTC"),
-      primary: body.primary ?? false,
-      createdAt: now,
-      provider
-    };
-    saveCalendar(provider, calendar);
+    setSelectedCalendar(provider, calendar.id);
+
+    return createJsonResponse({
+      status: "selected",
+      provider,
+      calendar
+    });
+  } catch (error) {
+    return createCalendarErrorResponse(error);
   }
-
-  setSelectedCalendar(provider, calendar.id);
-
-  return createJsonResponse({
-    status: "selected",
-    provider,
-    calendar
-  });
 };
 
 export const handleCalendarEventCreate = async (
@@ -332,11 +334,10 @@ export const handleCalendarEventCreate = async (
     );
   }
 
-  const now = new Date().toISOString();
   const event: CalendarEvent = {
-    id: crypto.randomUUID(),
+    id: "",
     calendarId,
-    providerEventId: `google-${crypto.randomUUID()}`,
+    providerEventId: undefined,
     title,
     description: normalizeString(body.description ?? "") || undefined,
     location: body.location,
@@ -345,13 +346,16 @@ export const handleCalendarEventCreate = async (
     status: body.status ?? "confirmed",
     participants: normalizeParticipantList(body.participants),
     tags: normalizeTags(body.tags),
-    createdAt: now,
-    updatedAt: now
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
 
-  saveEvent(calendarId, event);
-
-  return createJsonResponse({ status: "created", event });
+  try {
+    const created = await createGoogleEvent(connection, calendarId, event);
+    return createJsonResponse({ status: "created", event: created });
+  } catch (error) {
+    return createCalendarErrorResponse(error);
+  }
 };
 
 export const handleCalendarEventUpdate = async (
@@ -389,31 +393,33 @@ export const handleCalendarEventUpdate = async (
     );
   }
 
-  const existing = getEvent(calendarId, eventId);
-  if (!existing) {
-    return createJsonResponse({ error: "Event not found." }, 404);
-  }
-
-  const updated: CalendarEvent = {
-    ...existing,
-    title: body.title ? normalizeString(body.title) : existing.title,
+  const updatePayload: Partial<CalendarEvent> = {
+    title: body.title ? normalizeString(body.title) : undefined,
     description: body.description
       ? normalizeString(body.description)
-      : existing.description,
-    location: body.location ?? existing.location,
-    start: body.start ?? existing.start,
-    end: body.end ?? existing.end,
-    status: body.status ?? existing.status,
+      : undefined,
+    location: body.location,
+    start: body.start,
+    end: body.end,
+    status: body.status,
     participants: body.participants
       ? normalizeParticipantList(body.participants)
-      : existing.participants,
-    tags: body.tags ? normalizeTags(body.tags) : existing.tags,
+      : undefined,
+    tags: body.tags ? normalizeTags(body.tags) : undefined,
     updatedAt: new Date().toISOString()
   };
 
-  saveEvent(calendarId, updated);
-
-  return createJsonResponse({ status: "updated", event: updated });
+  try {
+    const updated = await updateGoogleEvent(
+      connection,
+      calendarId,
+      eventId,
+      updatePayload
+    );
+    return createJsonResponse({ status: "updated", event: updated });
+  } catch (error) {
+    return createCalendarErrorResponse(error);
+  }
 };
 
 export const handleCalendarEventDelete = async (
@@ -443,12 +449,12 @@ export const handleCalendarEventDelete = async (
     );
   }
 
-  const removed = deleteEvent(calendarId, eventId);
-  if (!removed) {
-    return createJsonResponse({ error: "Event not found." }, 404);
+  try {
+    await deleteGoogleEvent(connection, calendarId, eventId);
+    return createJsonResponse({ status: "deleted", eventId });
+  } catch (error) {
+    return createCalendarErrorResponse(error);
   }
-
-  return createJsonResponse({ status: "deleted", eventId });
 };
 
 export const handleCalendarEventList = async (
@@ -478,13 +484,53 @@ export const handleCalendarEventList = async (
   }
 
   const filters = normalizeEventFilters(url);
-  const events = listEvents(calendarId);
-  const filtered = applyFilters(events, filters);
 
-  return createJsonResponse({
-    calendarId,
-    provider,
-    filters,
-    events: filtered
-  });
+  try {
+    const events = await listGoogleEvents(connection, calendarId, {
+      start: filters.start,
+      end: filters.end,
+      search: filters.search,
+      limit: filters.limit
+    });
+    const filtered = applyFilters(events, filters);
+
+    return createJsonResponse({
+      calendarId,
+      provider,
+      filters,
+      events: filtered
+    });
+  } catch (error) {
+    return createCalendarErrorResponse(error);
+  }
+};
+
+const extractGoogleApiError = (error: unknown): string | null => {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  if ("message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+
+  const response = (error as { response?: { data?: unknown } }).response;
+  if (response?.data && typeof response.data === "object") {
+    const data = response.data as { error?: { message?: string } };
+    if (data.error?.message) {
+      return data.error.message;
+    }
+  }
+
+  return null;
+};
+
+const createCalendarErrorResponse = (error: unknown): Response => {
+  if (error instanceof GoogleCalendarConfigError) {
+    return createJsonResponse({ error: error.message }, 500);
+  }
+
+  const message =
+    extractGoogleApiError(error) ?? "Google Calendar request failed.";
+  return createJsonResponse({ error: message }, 502);
 };
