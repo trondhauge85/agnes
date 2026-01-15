@@ -38,6 +38,13 @@ established.
 - `PATCH /families/:id/todos/:todoId`: update a shared todo (status, title, notes, assignment).
 - `DELETE /families/:id/todos/:todoId`: remove a shared todo.
 
+## Family meal endpoints
+
+- `GET /families/:id/meals`: list shared meals for a family.
+- `POST /families/:id/meals`: create a shared meal (type, schedule, servings, assignment).
+- `PATCH /families/:id/meals/:mealId`: update a shared meal (status, notes, schedule, assignment).
+- `DELETE /families/:id/meals/:mealId`: remove a shared meal.
+
 ## Extension guidelines
 
 - Add new endpoints by creating a handler in `src/handlers/` and wiring it in

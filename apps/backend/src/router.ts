@@ -25,6 +25,12 @@ import {
   handleFamilyTodoList,
   handleFamilyTodoUpdate
 } from "./handlers/familyTodos";
+import {
+  handleFamilyMealCreate,
+  handleFamilyMealDelete,
+  handleFamilyMealList,
+  handleFamilyMealUpdate
+} from "./handlers/familyMeals";
 import { handleRoot, notFound } from "./handlers/root";
 
 export const handler = async (request: Request): Promise<Response> => {
@@ -110,6 +116,16 @@ export const handler = async (request: Request): Promise<Response> => {
     }
   }
 
+  const familyMealsMatch = pathname.match(/^\/families\/([^/]+)\/meals$/);
+  if (familyMealsMatch) {
+    if (request.method === "GET") {
+      return handleFamilyMealList(familyMealsMatch[1]);
+    }
+    if (request.method === "POST") {
+      return handleFamilyMealCreate(request, familyMealsMatch[1]);
+    }
+  }
+
   const familyTodoMatch = pathname.match(
     /^\/families\/([^/]+)\/todos\/([^/]+)$/
   );
@@ -123,6 +139,22 @@ export const handler = async (request: Request): Promise<Response> => {
     }
     if (request.method === "DELETE") {
       return handleFamilyTodoDelete(familyTodoMatch[1], familyTodoMatch[2]);
+    }
+  }
+
+  const familyMealMatch = pathname.match(
+    /^\/families\/([^/]+)\/meals\/([^/]+)$/
+  );
+  if (familyMealMatch) {
+    if (request.method === "PATCH") {
+      return handleFamilyMealUpdate(
+        request,
+        familyMealMatch[1],
+        familyMealMatch[2]
+      );
+    }
+    if (request.method === "DELETE") {
+      return handleFamilyMealDelete(familyMealMatch[1], familyMealMatch[2]);
     }
   }
 
