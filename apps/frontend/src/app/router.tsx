@@ -8,6 +8,7 @@ import { CalendarPage } from "../features/calendar/pages/CalendarPage";
 import { HomePage } from "../features/home/pages/HomePage";
 import { ShoppingListPage } from "../features/shopping/pages/ShoppingListPage";
 import { TodoPage } from "../features/todo/pages/TodoPage";
+import { FamilySettingsPage } from "../features/family/pages/FamilySettingsPage";
 
 import { AppLayout } from "./AppLayout";
 
@@ -61,6 +62,10 @@ export const router = createBrowserRouter([
       {
         path: "family/add",
         element: <AddFamilyMemberPage />,
+      },
+      {
+        path: "family/settings",
+        element: <FamilySettingsPage />,
       },
       {
         path: "create-family",

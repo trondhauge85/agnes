@@ -21,6 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import type { StoredFamily } from "../../families/services/familyStorage";
 import {
@@ -56,6 +57,7 @@ export const HomePage = () => {
   const [families, setFamilies] = useState<StoredFamily[]>([]);
   const [selectedFamily, setSelectedFamily] = useState<string | null>(getSelectedFamilyId());
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
   const [todos, setTodos] = useState<FamilyTodo[]>([]);
   const [meals, setMeals] = useState<FamilyMeal[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -178,7 +180,14 @@ export const HomePage = () => {
 
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
         <MenuItem onClick={() => setAnchorEl(null)}>Profile</MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)}>Settings</MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
+            navigate("/app/family/settings");
+          }}
+        >
+          Family settings
+        </MenuItem>
       </Menu>
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
