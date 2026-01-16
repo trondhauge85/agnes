@@ -315,3 +315,64 @@ export type CalendarEventListFilters = {
   search?: string;
   limit?: number;
 };
+
+export type CommunicationChannel = "sms" | "whatsapp" | "email";
+
+export type CommunicationStatus = "pending" | "sent" | "failed";
+
+export type CommunicationRecipient = {
+  address: string;
+  name?: string;
+};
+
+export type CommunicationRecord = {
+  id: string;
+  channel: CommunicationChannel;
+  idempotencyKey: string;
+  status: CommunicationStatus;
+  recipients: CommunicationRecipient[];
+  message: string;
+  providerMessageId?: string;
+  providerResponse?: Record<string, unknown>;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CommunicationSendPayload = {
+  channel: CommunicationChannel;
+  idempotencyKey: string;
+  message: string;
+  recipients: CommunicationRecipient[];
+};
+
+export type CommunicationProviderResult = {
+  status: CommunicationStatus;
+  providerMessageId?: string;
+  providerResponse?: Record<string, unknown>;
+  error?: string;
+};
+
+export type CommunicationProvider = {
+  channel: CommunicationChannel;
+  send: (payload: CommunicationSendPayload) => Promise<CommunicationProviderResult>;
+};
+
+export type SmsSendPayload = {
+  to: string;
+  message: string;
+  idempotencyKey: string;
+};
+
+export type SmsSendGroupPayload = {
+  to: string[];
+  message: string;
+  idempotencyKey: string;
+};
+
+export type SmsProviderResult = CommunicationProviderResult;
+
+export type SmsProvider = {
+  sendSms: (payload: SmsSendPayload) => Promise<SmsProviderResult>;
+  sendGroupSms: (payload: SmsSendGroupPayload) => Promise<SmsProviderResult>;
+};
