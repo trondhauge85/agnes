@@ -8,9 +8,18 @@ import { CalendarPage } from "../features/calendar/pages/CalendarPage";
 import { HomePage } from "../features/home/pages/HomePage";
 import { ShoppingListPage } from "../features/shopping/pages/ShoppingListPage";
 import { TodoPage } from "../features/todo/pages/TodoPage";
+import { hasStoredFamily } from "../features/families/services/familyStorage";
 import { FamilySettingsPage } from "../features/family/pages/FamilySettingsPage";
 
 import { AppLayout } from "./AppLayout";
+
+const getPostAuthRedirect = () => (hasStoredFamily() ? "/app/home" : "/app/create-family");
+const requireFamily = () => {
+  if (!hasStoredFamily()) {
+    return redirect("/app/create-family");
+  }
+  return null;
+};
 
 export const router = createBrowserRouter([
   {
@@ -22,7 +31,7 @@ export const router = createBrowserRouter([
     loader: () => {
       const session = getSession();
       if (session) {
-        return redirect("/app");
+        return redirect(getPostAuthRedirect());
       }
       return null;
     },
@@ -41,26 +50,31 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        loader: () => redirect("/app/home"),
+        loader: () => redirect(getPostAuthRedirect()),
       },
       {
         path: "home",
+        loader: requireFamily,
         element: <HomePage />,
       },
       {
         path: "calendar",
+        loader: requireFamily,
         element: <CalendarPage />,
       },
       {
         path: "todo",
+        loader: requireFamily,
         element: <TodoPage />,
       },
       {
         path: "shopping-list",
+        loader: requireFamily,
         element: <ShoppingListPage />,
       },
       {
         path: "family/add",
+        loader: requireFamily,
         element: <AddFamilyMemberPage />,
       },
       {
@@ -69,6 +83,12 @@ export const router = createBrowserRouter([
       },
       {
         path: "create-family",
+        loader: () => {
+          if (hasStoredFamily()) {
+            return redirect("/app/home");
+          }
+          return null;
+        },
         element: <CreateFamilyPage />,
       },
     ],

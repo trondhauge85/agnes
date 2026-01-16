@@ -30,6 +30,8 @@ const writeStorage = (families: StoredFamily[]) => {
 
 export const getStoredFamilies = (): StoredFamily[] => readStorage();
 
+export const hasStoredFamily = (): boolean => readStorage().length > 0;
+
 export const saveFamily = (family: StoredFamily): StoredFamily[] => {
   const current = readStorage();
   const exists = current.find((item) => item.id === family.id);

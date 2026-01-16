@@ -1,8 +1,10 @@
 import { Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from "@mui/material";
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
 import { setSessionCookie, setTokenSession } from "../services/authStorage";
+import { hasStoredFamily } from "../../families/services/familyStorage";
 
 type LoginFormState = {
   email: string;
@@ -26,6 +28,7 @@ export const LoginForm = () => {
     remember: true,
     useCookie: false,
   });
+  const navigate = useNavigate();
 
   const handleChange = (field: keyof LoginFormState) => (event: ChangeEvent<HTMLInputElement>) => {
     const value = field === "remember" || field === "useCookie" ? event.target.checked : event.target.value;
@@ -41,6 +44,9 @@ export const LoginForm = () => {
     } else {
       setTokenSession(fakeToken, state.remember);
     }
+
+    const destination = hasStoredFamily() ? "/app/home" : "/app/create-family";
+    navigate(destination, { replace: true });
   };
 
   return (

@@ -10,10 +10,15 @@ import {
 } from "@mui/material";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
 import { joinFamily } from "../services/familyApi";
-import { saveFamily } from "../../families/services/familyStorage";
+import {
+  getSelectedFamilyId,
+  getStoredFamilies,
+  saveFamily,
+} from "../../families/services/familyStorage";
 
 type FormState = {
   familyId: string;
@@ -44,8 +49,15 @@ const PhotoButton = styled(Button)`
 `;
 
 export const AddFamilyMemberPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const storedFamilyId = getSelectedFamilyId() ?? "";
+  const storedFamilyName =
+    getStoredFamilies().find((family) => family.id === storedFamilyId)?.name ?? "your family";
+  const routedFamilyId = (location.state as { familyId?: string } | null)?.familyId ?? "";
+
   const initialFormState: FormState = {
-    familyId: "",
+    familyId: routedFamilyId || storedFamilyId,
     addedByUserId: "",
     memberUserId: "",
     displayName: "",
@@ -132,7 +144,7 @@ export const AddFamilyMemberPage = () => {
               Add a family member
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Invite someone into your household by completing their profile and the required family metadata.
+              Invite someone into {storedFamilyName} by completing their profile and the required family metadata.
             </Typography>
           </Stack>
 
@@ -258,6 +270,14 @@ export const AddFamilyMemberPage = () => {
                   }}
                 >
                   Reset form
+                </Button>
+                <Button
+                  variant="text"
+                  type="button"
+                  onClick={() => navigate("/app/home")}
+                  disabled={!storedFamilyId}
+                >
+                  Continue to home
                 </Button>
                 <Button variant="contained" type="submit" disabled={isSubmitting}>
                   {isSubmitting ? "Adding member..." : "Add member"}
