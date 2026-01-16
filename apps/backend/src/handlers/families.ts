@@ -30,6 +30,7 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
   const pictureUrl = normalizeString(body.pictureUrl ?? "");
   const creatorId = normalizeString(body.creator?.userId ?? "");
   const creatorName = normalizeString(body.creator?.displayName ?? "");
+  const creatorPhone = normalizeString(body.creator?.phoneNumber ?? "");
   const metadata: FamilyMetadata = {
     interests: normalizeStringArray(body.metadata?.interests),
     goals: normalizeStringArray(body.metadata?.goals)
@@ -62,7 +63,8 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
         userId: creatorId,
         displayName: creatorName,
         role: "owner",
-        joinedAt: now
+        joinedAt: now,
+        phoneNumber: creatorPhone || undefined
       }
     ]
   };
@@ -98,6 +100,7 @@ export const handleFamilyJoin = async (
   const userId = normalizeString(body.userId ?? "");
   const displayName = normalizeString(body.displayName ?? "");
   const addedByUserId = normalizeString(body.addedByUserId ?? "");
+  const phoneNumber = normalizeString(body.phoneNumber ?? "");
 
   if (!userId || !displayName || !addedByUserId) {
     return createJsonResponse(
@@ -131,7 +134,8 @@ export const handleFamilyJoin = async (
     userId,
     displayName,
     role: "member",
-    joinedAt: now
+    joinedAt: now,
+    phoneNumber: phoneNumber || undefined
   };
   family.members.push(newMember);
 
