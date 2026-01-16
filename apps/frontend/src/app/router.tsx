@@ -9,6 +9,7 @@ import { HomePage } from "../features/home/pages/HomePage";
 import { ShoppingListPage } from "../features/shopping/pages/ShoppingListPage";
 import { TodoPage } from "../features/todo/pages/TodoPage";
 import { hasStoredFamily } from "../features/families/services/familyStorage";
+import { FamilySettingsPage } from "../features/family/pages/FamilySettingsPage";
 
 import { AppLayout } from "./AppLayout";
 
@@ -75,6 +76,10 @@ export const router = createBrowserRouter([
         path: "family/add",
         loader: requireFamily,
         element: <AddFamilyMemberPage />,
+      },
+      {
+        path: "family/settings",
+        element: <FamilySettingsPage />,
       },
       {
         path: "create-family",

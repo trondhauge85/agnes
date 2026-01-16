@@ -59,6 +59,7 @@ export const HomePage = () => {
   const [families, setFamilies] = useState<StoredFamily[]>([]);
   const [selectedFamily, setSelectedFamily] = useState<string | null>(getSelectedFamilyId());
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
   const [todos, setTodos] = useState<FamilyTodo[]>([]);
   const [meals, setMeals] = useState<FamilyMeal[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -190,6 +191,14 @@ export const HomePage = () => {
         <MenuItem onClick={() => setAnchorEl(null)}>Settings</MenuItem>
         <Divider />
         <MenuItem onClick={handleSignOut}>Sign out</MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAnchorEl(null);
+            navigate("/app/family/settings");
+          }}
+        >
+          Family settings
+        </MenuItem>
       </Menu>
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
