@@ -31,6 +31,12 @@ import {
   handleFamilyMealList,
   handleFamilyMealUpdate
 } from "./handlers/familyMeals";
+import {
+  handleFamilyProjectCreate,
+  handleFamilyProjectDelete,
+  handleFamilyProjectList,
+  handleFamilyProjectUpdate
+} from "./handlers/familyProjects";
 import { handleRoot, notFound } from "./handlers/root";
 
 export const handler = async (request: Request): Promise<Response> => {
@@ -126,6 +132,16 @@ export const handler = async (request: Request): Promise<Response> => {
     }
   }
 
+  const familyProjectsMatch = pathname.match(/^\/families\/([^/]+)\/projects$/);
+  if (familyProjectsMatch) {
+    if (request.method === "GET") {
+      return handleFamilyProjectList(familyProjectsMatch[1]);
+    }
+    if (request.method === "POST") {
+      return handleFamilyProjectCreate(request, familyProjectsMatch[1]);
+    }
+  }
+
   const familyTodoMatch = pathname.match(
     /^\/families\/([^/]+)\/todos\/([^/]+)$/
   );
@@ -139,6 +155,25 @@ export const handler = async (request: Request): Promise<Response> => {
     }
     if (request.method === "DELETE") {
       return handleFamilyTodoDelete(familyTodoMatch[1], familyTodoMatch[2]);
+    }
+  }
+
+  const familyProjectMatch = pathname.match(
+    /^\/families\/([^/]+)\/projects\/([^/]+)$/
+  );
+  if (familyProjectMatch) {
+    if (request.method === "PATCH") {
+      return handleFamilyProjectUpdate(
+        request,
+        familyProjectMatch[1],
+        familyProjectMatch[2]
+      );
+    }
+    if (request.method === "DELETE") {
+      return handleFamilyProjectDelete(
+        familyProjectMatch[1],
+        familyProjectMatch[2]
+      );
     }
   }
 

@@ -133,6 +133,84 @@ export type FamilyMealUpdatePayload = {
   assignedToUserId?: string | null;
 };
 
+export type FamilyProjectStatus =
+  | "planned"
+  | "active"
+  | "paused"
+  | "completed"
+  | "cancelled";
+
+export type FamilyProjectItemType =
+  | "todo"
+  | "calendar_event"
+  | "message"
+  | "custom";
+
+export type FamilyProjectItemLink = {
+  type: FamilyProjectItemType;
+  referenceId: string;
+  label?: string;
+  metadata?: Record<string, string>;
+};
+
+export type FamilyProjectTimeframeExtension = {
+  endDate: string;
+  reason?: string;
+  createdAt: string;
+};
+
+export type FamilyProjectTimeframe = {
+  startDate?: string;
+  targetEndDate?: string;
+  extensions: FamilyProjectTimeframeExtension[];
+};
+
+export type FamilyProject = {
+  id: string;
+  familyId: string;
+  title: string;
+  description?: string;
+  scope: string;
+  status: FamilyProjectStatus;
+  timeframe: FamilyProjectTimeframe;
+  tags: string[];
+  items: FamilyProjectItemLink[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FamilyProjectTimeframeCreatePayload = {
+  startDate?: string;
+  targetEndDate?: string;
+};
+
+export type FamilyProjectTimeframeUpdatePayload = {
+  startDate?: string | null;
+  targetEndDate?: string | null;
+  extendTo?: string | null;
+  extensionReason?: string | null;
+};
+
+export type FamilyProjectCreatePayload = {
+  title: string;
+  description?: string;
+  scope: string;
+  status?: FamilyProjectStatus;
+  timeframe?: FamilyProjectTimeframeCreatePayload;
+  tags?: string[];
+  items?: FamilyProjectItemLink[];
+};
+
+export type FamilyProjectUpdatePayload = {
+  title?: string;
+  description?: string | null;
+  scope?: string;
+  status?: FamilyProjectStatus;
+  timeframe?: FamilyProjectTimeframeUpdatePayload;
+  tags?: string[] | null;
+  items?: FamilyProjectItemLink[] | null;
+};
+
 export type CalendarProvider = "google";
 
 export type CalendarConnection = {
