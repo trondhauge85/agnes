@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
 import { createFamily } from "../services/familyApi";
@@ -112,6 +113,7 @@ export const CreateFamilyPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const previewUrl = useMemo(() => photoUrl ?? placeholderSvg, [photoUrl]);
 
@@ -160,10 +162,10 @@ export const CreateFamilyPage = () => {
 
       saveFamily(response.family);
       setSuccessMessage(`Family created! You can invite everyone with code ${response.family.id}.`);
-      setFamilyName("");
-      setDisplayName("");
-      setPhotoUrl(null);
-      setSelectedDescriptors([]);
+      navigate("/app/family/add", {
+        replace: true,
+        state: { familyId: response.family.id, familyName: response.family.name },
+      });
     } catch (error) {
       setErrorMessage("Something went sideways while creating the family. Try again in a sec.");
     } finally {

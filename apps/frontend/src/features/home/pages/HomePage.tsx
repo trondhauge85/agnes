@@ -21,7 +21,9 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
+import { clearSession } from "../../auth/services/authStorage";
 import type { StoredFamily } from "../../families/services/familyStorage";
 import {
   getSelectedFamilyId,
@@ -52,6 +54,7 @@ const getTodayRange = () => {
 };
 
 export const HomePage = () => {
+  const navigate = useNavigate();
   const todayRange = useMemo(() => getTodayRange(), []);
   const [families, setFamilies] = useState<StoredFamily[]>([]);
   const [selectedFamily, setSelectedFamily] = useState<string | null>(getSelectedFamilyId());
@@ -135,6 +138,12 @@ export const HomePage = () => {
     setSelectedFamilyId(value);
   };
 
+  const handleSignOut = () => {
+    clearSession();
+    setAnchorEl(null);
+    navigate("/login", { replace: true });
+  };
+
   return (
     <Box sx={{ backgroundColor: "background.default", minHeight: "100%" }}>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: "1px solid #e2e8f0" }}>
@@ -179,6 +188,8 @@ export const HomePage = () => {
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
         <MenuItem onClick={() => setAnchorEl(null)}>Profile</MenuItem>
         <MenuItem onClick={() => setAnchorEl(null)}>Settings</MenuItem>
+        <Divider />
+        <MenuItem onClick={handleSignOut}>Sign out</MenuItem>
       </Menu>
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
