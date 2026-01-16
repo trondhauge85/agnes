@@ -11,6 +11,9 @@ export const saveFamily = (family: Family): void => {
   families.set(family.id, family);
 };
 
+export const listFamilies = (): Family[] =>
+  Array.from(families.values()).map((family) => serializeFamily(family));
+
 export const getMemberById = (
   family: Family,
   userId: string

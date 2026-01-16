@@ -26,6 +26,7 @@ export type FamilyMember = {
   displayName: string;
   role: FamilyRole;
   joinedAt: string;
+  phoneNumber?: string;
 };
 
 export type FamilyMetadata = {
@@ -55,6 +56,20 @@ export type FamilyTodo = {
   updatedAt: string;
 };
 
+export type FamilyShoppingItemStatus = "open" | "completed";
+
+export type FamilyShoppingItem = {
+  id: string;
+  familyId: string;
+  title: string;
+  notes?: string;
+  quantity?: number;
+  unit?: string;
+  status: FamilyShoppingItemStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type FamilyMealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 export type FamilyMealStatus = "planned" | "cooked" | "cancelled";
@@ -80,6 +95,7 @@ export type FamilyCreatePayload = {
   creator: {
     userId: string;
     displayName: string;
+    phoneNumber?: string;
   };
   metadata?: {
     interests?: string[];
@@ -91,6 +107,7 @@ export type FamilyJoinPayload = {
   userId: string;
   displayName: string;
   addedByUserId: string;
+  phoneNumber?: string;
 };
 
 export type FamilyLeavePayload = {
