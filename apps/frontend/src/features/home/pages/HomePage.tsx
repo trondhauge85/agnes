@@ -6,6 +6,7 @@ import {
   CardContent,
   Container,
   Divider,
+  Fab,
   FormControl,
   Grid,
   IconButton,
@@ -15,12 +16,14 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Paper,
   Select,
   Stack,
+  TextField,
   Toolbar,
   Typography,
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { clearSession } from "../../auth/services/authStorage";
@@ -59,7 +62,6 @@ export const HomePage = () => {
   const [families, setFamilies] = useState<StoredFamily[]>([]);
   const [selectedFamily, setSelectedFamily] = useState<string | null>(getSelectedFamilyId());
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const navigate = useNavigate();
   const [todos, setTodos] = useState<FamilyTodo[]>([]);
   const [meals, setMeals] = useState<FamilyMeal[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -67,6 +69,23 @@ export const HomePage = () => {
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [isLoadingFamily, setIsLoadingFamily] = useState(false);
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleFileSelection = (files: FileList | null) => {
+    if (!files) {
+      return;
+    }
+    setDroppedFiles(Array.from(files));
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    handleFileSelection(event.dataTransfer.files);
+  };
 
   useEffect(() => {
     const stored = getStoredFamilies();
@@ -186,7 +205,14 @@ export const HomePage = () => {
         </Toolbar>
       </AppBar>
 
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        PaperProps={{
+          sx: { borderRadius: 3, boxShadow: "0 24px 60px rgba(15, 23, 42, 0.18)" },
+        }}
+      >
         <MenuItem onClick={() => setAnchorEl(null)}>Profile</MenuItem>
         <MenuItem onClick={() => setAnchorEl(null)}>Settings</MenuItem>
         <Divider />
@@ -401,6 +427,248 @@ export const HomePage = () => {
           </Card>
         </Stack>
       </Container>
+
+      <Fab
+        color="primary"
+        aria-label="Add"
+        onClick={() => setIsAddOpen(true)}
+        sx={{
+          position: "fixed",
+          right: { xs: 16, md: 32 },
+          bottom: { xs: 16, md: 32 },
+          boxShadow: "0 12px 30px rgba(37, 99, 235, 0.35)",
+          textTransform: "none",
+          fontWeight: 600,
+          px: 3,
+          borderRadius: "999px",
+        }}
+        variant="extended"
+      >
+        + Add
+      </Fab>
+
+      <Paper
+        elevation={0}
+        sx={{
+          position: "fixed",
+          inset: 0,
+          bgcolor: "rgba(15, 23, 42, 0.5)",
+          opacity: isAddOpen ? 1 : 0,
+          pointerEvents: isAddOpen ? "auto" : "none",
+          transition: "opacity 300ms ease",
+          zIndex: 1200,
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "center",
+          px: { xs: 2, md: 4 },
+          py: { xs: 3, md: 5 },
+        }}
+        onClick={() => setIsAddOpen(false)}
+      >
+        <Paper
+          elevation={4}
+          onClick={(event) => event.stopPropagation()}
+          sx={{
+            width: "min(720px, 100%)",
+            borderRadius: 4,
+            bgcolor: "#ffffff",
+            boxShadow: "0 30px 80px rgba(15, 23, 42, 0.25)",
+            p: { xs: 3, md: 4 },
+            transform: isAddOpen ? "translateY(0)" : "translateY(24px)",
+            transition: "transform 320ms ease",
+          }}
+        >
+          <Stack spacing={3}>
+            <Stack spacing={1}>
+              <Typography variant="h5" fontWeight={700}>
+                Add something new
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Capture a note, drop in a file, or record a quick voice memo.
+              </Typography>
+            </Stack>
+
+            <TextField
+              label="Write a note"
+              multiline
+              minRows={3}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="What do you want to remember or share?"
+              sx={{
+                bgcolor: "#f8fafc",
+                borderRadius: 2,
+                "& .MuiOutlinedInput-root": { borderRadius: 2 },
+              }}
+            />
+
+            <Stack
+              spacing={2}
+              sx={{
+                borderRadius: 3,
+                border: "1px dashed",
+                borderColor: isDragging ? "primary.main" : "#cbd5f5",
+                bgcolor: isDragging ? "rgba(37, 99, 235, 0.08)" : "#f8fafc",
+                p: 3,
+                transition: "all 200ms ease",
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+            >
+              <Stack spacing={0.5}>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Drag & drop a file
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  PDFs, photos, or audio clips are all welcome.
+                </Typography>
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+                <Box>
+                  <input
+                    id="add-file-input"
+                    type="file"
+                    hidden
+                    onChange={(event) => handleFileSelection(event.target.files)}
+                  />
+                  <label htmlFor="add-file-input">
+                    <Box
+                      component="span"
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        px: 3,
+                        py: 1.25,
+                        borderRadius: "999px",
+                        bgcolor: "primary.main",
+                        color: "#ffffff",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        boxShadow: "0 12px 20px rgba(37, 99, 235, 0.35)",
+                      }}
+                    >
+                      Upload file
+                    </Box>
+                  </label>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  or drop it here
+                </Typography>
+              </Stack>
+              {droppedFiles.length > 0 ? (
+                <Stack spacing={0.5}>
+                  {droppedFiles.map((file) => (
+                    <Typography key={file.name} variant="body2" color="text.secondary">
+                      {file.name}
+                    </Typography>
+                  ))}
+                </Stack>
+              ) : null}
+            </Stack>
+
+            <Stack
+              spacing={2}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid #e2e8f0",
+                p: 3,
+                bgcolor: "#ffffff",
+              }}
+            >
+              <Stack spacing={0.5}>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Read it in sound
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Upload a voice note or record something quick.
+                </Typography>
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+                <Box>
+                  <input
+                    id="audio-input"
+                    type="file"
+                    hidden
+                    accept="audio/*"
+                    onChange={(event) => handleFileSelection(event.target.files)}
+                  />
+                  <label htmlFor="audio-input">
+                    <Box
+                      component="span"
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        px: 3,
+                        py: 1.25,
+                        borderRadius: "999px",
+                        bgcolor: "#0f172a",
+                        color: "#ffffff",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Upload audio
+                    </Box>
+                  </label>
+                </Box>
+                <Box
+                  sx={{
+                    px: 3,
+                    py: 1.25,
+                    borderRadius: "999px",
+                    border: "1px solid #e2e8f0",
+                    color: "text.secondary",
+                    fontWeight: 600,
+                  }}
+                >
+                  Record soon
+                </Box>
+              </Stack>
+            </Stack>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="flex-end">
+              <Box
+                component="button"
+                type="button"
+                onClick={() => setIsAddOpen(false)}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid #e2e8f0",
+                  padding: "10px 24px",
+                  background: "transparent",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </Box>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => setIsAddOpen(false)}
+                style={{
+                  borderRadius: 999,
+                  border: "none",
+                  padding: "10px 24px",
+                  background: "linear-gradient(135deg, #2563eb, #4f46e5)",
+                  color: "#ffffff",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  boxShadow: "0 16px 30px rgba(37, 99, 235, 0.35)",
+                }}
+              >
+                Add
+              </Box>
+            </Stack>
+          </Stack>
+        </Paper>
+      </Paper>
     </Box>
   );
 };
