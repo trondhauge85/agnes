@@ -74,6 +74,16 @@ Provide the following environment variables to enable the integration:
 The client must be configured in Google Cloud Console with the redirect URI you
 pass to `POST /calendar/setup` so the authorization code exchange succeeds.
 
+## WhatsApp configuration
+
+Provide the following environment variables to enable the WhatsApp integration:
+
+- `WHATSAPP_ACCESS_TOKEN`: WhatsApp Business Cloud API access token.
+- `WHATSAPP_PHONE_NUMBER_ID`: Phone number ID for the WhatsApp Business account.
+- `WHATSAPP_API_VERSION` (optional): Graph API version (default `v19.0`).
+- `WHATSAPP_API_BASE_URL` (optional): Graph API base URL (default
+  `https://graph.facebook.com`).
+
 ## Bruno collection
 
 The Bruno collection lives in `apps/backend/bruno` and mirrors the handler
