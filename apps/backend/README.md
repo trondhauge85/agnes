@@ -11,6 +11,7 @@ The backend is split by responsibility so new features are easy to extend:
 - `src/handlers/`: route handlers grouped by domain (auth, families, root).
 - `src/data/`: in-memory stores and domain-specific helpers (e.g., families).
 - `src/utils/`: cross-cutting helpers for HTTP and string normalization.
+- `src/llm/`: modular LLM integration (providers, tools, skills, prompts, context).
 - `src/types.ts`: shared domain types and payload definitions.
 
 ## Calendar endpoints
@@ -54,6 +55,9 @@ established.
 - If you add new data stores or persistence adapters, place them in `src/data/`
   and keep the handler APIs stable.
 - Update `src/types.ts` when adding new payloads or response shapes.
+- Keep LLM providers, tools, skills, prompts, and context adapters isolated in
+  `src/llm/` so the orchestration layer stays stable even as integrations
+  change.
 
 ## Next steps
 
