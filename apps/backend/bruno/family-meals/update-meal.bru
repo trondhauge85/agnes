@@ -1,0 +1,19 @@
+meta {
+  name: Update Family Meal
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/families/{{familyId}}/meals/{{mealId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "status": "cooked",
+  "notes": "Everyone loved it.",
+  "servings": 5
+}

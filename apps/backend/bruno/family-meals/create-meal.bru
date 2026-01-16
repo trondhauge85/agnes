@@ -1,0 +1,24 @@
+meta {
+  name: Create Family Meal
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/families/{{familyId}}/meals
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "title": "Pasta night",
+  "notes": "Try the new marinara recipe.",
+  "status": "planned",
+  "mealType": "dinner",
+  "scheduledFor": "2025-01-12T18:30:00.000Z",
+  "servings": 4,
+  "recipeUrl": "https://example.com/recipe",
+  "assignedToUserId": "{{memberUserId}}"
+}

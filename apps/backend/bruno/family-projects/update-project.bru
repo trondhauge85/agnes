@@ -1,0 +1,22 @@
+meta {
+  name: Update Family Project
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/families/{{familyId}}/projects/{{projectId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  "status": "paused",
+  "timeframe": {
+    "extendTo": "2025-03-15T18:00:00.000Z",
+    "extensionReason": "Waiting on supplies."
+  },
+  "tags": ["seasonal", "paused"]
+}
