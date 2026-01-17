@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
+import { getApiErrorDescriptor } from "../../../shared/api";
 import { joinFamily } from "../services/familyApi";
 import {
   getSelectedFamilyId,
@@ -66,7 +67,10 @@ export const AddFamilyMemberPage = () => {
     photoFile: null,
   };
   const [form, setForm] = useState<FormState>(initialFormState);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{
+    message: string;
+    messageKey: string;
+  } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -101,7 +105,10 @@ export const AddFamilyMemberPage = () => {
     setSuccessMessage(null);
 
     if (!form.familyId || !form.addedByUserId || !form.memberUserId || !form.displayName) {
-      setError("Family ID, member ID, display name, and added by user ID are required.");
+      setError({
+        message: "Family ID, member ID, display name, and added by user ID are required.",
+        messageKey: "errors.family.join_required_fields"
+      });
       return;
     }
 
@@ -126,7 +133,11 @@ export const AddFamilyMemberPage = () => {
         photoFile: null,
       }));
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to add family member.");
+      const descriptor = getApiErrorDescriptor(submitError);
+      setError({
+        message: descriptor.message,
+        messageKey: descriptor.messageKey
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -256,7 +267,7 @@ export const AddFamilyMemberPage = () => {
                 </Typography>
               </Stack>
 
-              {error ? <Alert severity="error">{error}</Alert> : null}
+              {error ? <Alert severity="error">{error.message}</Alert> : null}
               {successMessage ? <Alert severity="success">{successMessage}</Alert> : null}
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="flex-end">

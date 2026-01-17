@@ -17,7 +17,7 @@ import {
   saveFamilyProject,
   updateFamilyProject
 } from "../data/familyProjects";
-import { createJsonResponse, parseJsonBody } from "../utils/http";
+import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
 import { normalizeString, normalizeStringArray } from "../utils/strings";
 
 const allowedProjectStatuses: FamilyProjectStatus[] = [
@@ -181,7 +181,13 @@ export const handleFamilyProjectList = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   return createJsonResponse({
@@ -196,32 +202,58 @@ export const handleFamilyProjectCreate = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   const body = await parseJsonBody<FamilyProjectCreatePayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const title = normalizeString(body.title ?? "");
   if (!title) {
-    return createJsonResponse({ error: "Project title is required." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Project title is required.",
+      messageKey: "errors.project.title_required",
+      status: 400,
+      details: { field: "title", reason: "required" }
+    });
   }
 
   const scope = normalizeString(body.scope ?? "");
   if (!scope) {
-    return createJsonResponse({ error: "Project scope is required." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Project scope is required.",
+      messageKey: "errors.project.scope_required",
+      status: 400,
+      details: { field: "scope", reason: "required" }
+    });
   }
 
   const description = normalizeString(body.description ?? "");
 
   const status = normalizeProjectStatus(body.status) ?? "planned";
   if (!status) {
-    return createJsonResponse({ error: "Unsupported project status." }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: "Unsupported project status.",
+      messageKey: "errors.project.status_unsupported",
+      status: 422,
+      details: { field: "status", reason: "unsupported" }
+    });
   }
 
   const timeframeSeed: FamilyProjectTimeframe = {
@@ -239,13 +271,24 @@ export const handleFamilyProjectCreate = async (
       : undefined;
   const timeframeResult = normalizeTimeframe(timeframeUpdate, timeframeSeed);
   if (timeframeResult.error) {
-    return createJsonResponse({ error: timeframeResult.error }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: timeframeResult.error,
+      messageKey: "errors.project.timeframe_invalid",
+      status: 422
+    });
   }
 
   const tags = normalizeStringArray(body.tags);
   const itemsResult = normalizeItemLinks(body.items);
   if (itemsResult.error) {
-    return createJsonResponse({ error: itemsResult.error }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: itemsResult.error,
+      messageKey: "errors.project.items_invalid",
+      status: 422,
+      details: { field: "items", reason: "invalid" }
+    });
   }
 
   const now = new Date().toISOString();
@@ -278,32 +321,58 @@ export const handleFamilyProjectUpdate = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   const existing = getFamilyProject(familyId, projectId);
   if (!existing) {
-    return createJsonResponse({ error: "Project not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Project not found.",
+      messageKey: "errors.project.not_found",
+      status: 404,
+      details: { projectId }
+    });
   }
 
   const body = await parseJsonBody<FamilyProjectUpdatePayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const title =
     body.title === undefined ? undefined : normalizeString(body.title ?? "");
   if (title !== undefined && !title) {
-    return createJsonResponse({ error: "Project title cannot be empty." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Project title cannot be empty.",
+      messageKey: "errors.project.title_empty",
+      status: 400,
+      details: { field: "title", reason: "empty" }
+    });
   }
 
   const scope =
     body.scope === undefined ? undefined : normalizeString(body.scope ?? "");
   if (scope !== undefined && !scope) {
-    return createJsonResponse({ error: "Project scope cannot be empty." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Project scope cannot be empty.",
+      messageKey: "errors.project.scope_empty",
+      status: 400,
+      details: { field: "scope", reason: "empty" }
+    });
   }
 
   const description =
@@ -316,12 +385,23 @@ export const handleFamilyProjectUpdate = async (
       ? undefined
       : normalizeProjectStatus(body.status ?? "");
   if (body.status !== undefined && !status) {
-    return createJsonResponse({ error: "Unsupported project status." }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: "Unsupported project status.",
+      messageKey: "errors.project.status_unsupported",
+      status: 422,
+      details: { field: "status", reason: "unsupported" }
+    });
   }
 
   const timeframeResult = normalizeTimeframe(body.timeframe, existing.timeframe);
   if (timeframeResult.error) {
-    return createJsonResponse({ error: timeframeResult.error }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: timeframeResult.error,
+      messageKey: "errors.project.timeframe_invalid",
+      status: 422
+    });
   }
 
   const tags =
@@ -333,7 +413,13 @@ export const handleFamilyProjectUpdate = async (
 
   const itemsResult = normalizeItemLinks(body.items);
   if (itemsResult.error) {
-    return createJsonResponse({ error: itemsResult.error }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: itemsResult.error,
+      messageKey: "errors.project.items_invalid",
+      status: 422,
+      details: { field: "items", reason: "invalid" }
+    });
   }
 
   const updated = updateFamilyProject(familyId, projectId, (project) => ({
@@ -350,7 +436,13 @@ export const handleFamilyProjectUpdate = async (
   }));
 
   if (!updated) {
-    return createJsonResponse({ error: "Project not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Project not found.",
+      messageKey: "errors.project.not_found",
+      status: 404,
+      details: { projectId }
+    });
   }
 
   return createJsonResponse({
@@ -365,12 +457,24 @@ export const handleFamilyProjectDelete = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   const removed = removeFamilyProject(familyId, projectId);
   if (!removed) {
-    return createJsonResponse({ error: "Project not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Project not found.",
+      messageKey: "errors.project.not_found",
+      status: 404,
+      details: { projectId }
+    });
   }
 
   return createJsonResponse({

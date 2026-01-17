@@ -20,3 +20,5 @@ export {
   type LogPayload,
   type LogTransport
 } from "./logging";
+
+export * from "./apiErrors";

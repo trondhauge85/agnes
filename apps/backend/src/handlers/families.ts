@@ -14,16 +14,18 @@ import {
   saveFamily,
   serializeFamily
 } from "../data/families";
-import { createJsonResponse, parseJsonBody } from "../utils/http";
+import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
 import { normalizeString, normalizeStringArray } from "../utils/strings";
 
 export const handleFamilyCreate = async (request: Request): Promise<Response> => {
   const body = await parseJsonBody<FamilyCreatePayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const name = normalizeString(body.name ?? "");
@@ -37,18 +39,33 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
   };
 
   if (!name) {
-    return createJsonResponse({ error: "Family name is required." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Family name is required.",
+      messageKey: "errors.family.name_required",
+      status: 400,
+      details: { field: "name", reason: "required" }
+    });
   }
 
   if (!pictureUrl) {
-    return createJsonResponse({ error: "Family pictureUrl is required." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Family pictureUrl is required.",
+      messageKey: "errors.family.picture_required",
+      status: 400,
+      details: { field: "pictureUrl", reason: "required" }
+    });
   }
 
   if (!creatorId || !creatorName) {
-    return createJsonResponse(
-      { error: "creator.userId and creator.displayName are required." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "creator.userId and creator.displayName are required.",
+      messageKey: "errors.family.creator_required",
+      status: 400,
+      details: { fields: ["creator.userId", "creator.displayName"], reason: "required" }
+    });
   }
 
   const now = new Date().toISOString();
@@ -86,15 +103,23 @@ export const handleFamilyJoin = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   const body = await parseJsonBody<FamilyJoinPayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const userId = normalizeString(body.userId ?? "");
@@ -103,21 +128,28 @@ export const handleFamilyJoin = async (
   const phoneNumber = normalizeString(body.phoneNumber ?? "");
 
   if (!userId || !displayName || !addedByUserId) {
-    return createJsonResponse(
-      {
-        error:
-          "userId, displayName, and addedByUserId are required to join a family."
-      },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message:
+        "userId, displayName, and addedByUserId are required to join a family.",
+      messageKey: "errors.family.join_required_fields",
+      status: 400,
+      details: {
+        fields: ["userId", "displayName", "addedByUserId"],
+        reason: "required"
+      }
+    });
   }
 
   const addedByMember = getMemberById(family, addedByUserId);
   if (!addedByMember || !canAddMembers(addedByMember.role)) {
-    return createJsonResponse(
-      { error: "Only owners or admins can add family members." },
-      403
-    );
+    return createErrorResponse({
+      code: "forbidden",
+      message: "Only owners or admins can add family members.",
+      messageKey: "errors.family.join_forbidden",
+      status: 403,
+      details: { addedByUserId }
+    });
   }
 
   const existingMember = getMemberById(family, userId);
@@ -156,38 +188,57 @@ export const handleFamilyLeave = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   const body = await parseJsonBody<FamilyLeavePayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const userId = normalizeString(body.userId ?? "");
   if (!userId) {
-    return createJsonResponse({ error: "userId is required to leave." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "userId is required to leave.",
+      messageKey: "errors.family.leave_user_required",
+      status: 400,
+      details: { field: "userId", reason: "required" }
+    });
   }
 
   const member = getMemberById(family, userId);
   if (!member) {
-    return createJsonResponse(
-      { error: "Member not found in family." },
-      404
-    );
+    return createErrorResponse({
+      code: "not_found",
+      message: "Member not found in family.",
+      messageKey: "errors.family.member_not_found",
+      status: 404,
+      details: { userId }
+    });
   }
 
   if (member.role === "owner") {
     const ownerCount = family.members.filter((item) => item.role === "owner")
       .length;
     if (ownerCount <= 1) {
-      return createJsonResponse(
-        { error: "Families must have at least one owner." },
-        400
-      );
+      return createErrorResponse({
+        code: "bad_request",
+        message: "Families must have at least one owner.",
+        messageKey: "errors.family.owner_required",
+        status: 400
+      });
     }
   }
 

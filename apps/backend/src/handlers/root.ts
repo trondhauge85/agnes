@@ -1,5 +1,5 @@
 import type { Runtime } from "../types";
-import { createJsonResponse } from "../utils/http";
+import { createErrorResponse, createJsonResponse } from "../utils/http";
 
 export const handleRoot = (pathname: string): Response =>
   createJsonResponse({
@@ -10,10 +10,10 @@ export const handleRoot = (pathname: string): Response =>
   });
 
 export const notFound = (pathname: string): Response =>
-  createJsonResponse(
-    {
-      error: "Route not found.",
-      path: pathname
-    },
-    404
-  );
+  createErrorResponse({
+    code: "not_found",
+    message: "Route not found.",
+    messageKey: "errors.route.not_found",
+    status: 404,
+    details: { path: pathname }
+  });
