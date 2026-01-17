@@ -38,10 +38,21 @@ import {
   handleFamilyProjectUpdate
 } from "./handlers/familyProjects";
 import { handleRoot, notFound } from "./handlers/root";
+import { configureLogging, createLogger } from "@agnes/shared";
+
+configureLogging({ level: "info", context: { service: "backend" } });
+const logger = createLogger("router");
 
 export const handler = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
   const { pathname } = url;
+
+  logger.info("request.received", {
+    data: {
+      method: request.method,
+      pathname
+    }
+  });
 
   if (request.method === "GET" && pathname === "/") {
     return handleRoot(pathname);
@@ -192,6 +203,13 @@ export const handler = async (request: Request): Promise<Response> => {
       return handleFamilyMealDelete(familyMealMatch[1], familyMealMatch[2]);
     }
   }
+
+  logger.warn("request.not_found", {
+    data: {
+      method: request.method,
+      pathname
+    }
+  });
 
   return notFound(pathname);
 };
