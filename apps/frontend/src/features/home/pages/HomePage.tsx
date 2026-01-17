@@ -4,6 +4,7 @@ import {
   Box,
   Card,
   CardContent,
+  Chip,
   Container,
   Divider,
   Fab,
@@ -43,6 +44,38 @@ import {
   type FamilyTodo,
 } from "../services/homeApi";
 
+const trackingPatterns = [
+  /\b1Z[0-9A-Z]{16}\b/g,
+  /\b[A-Z]{2}[0-9]{9}US\b/g,
+  /\b\d{12}\b/g,
+  /\b\d{15}\b/g,
+  /\b\d{20,22}\b/g,
+];
+
+const extractTrackingNumbers = (value: string) => {
+  if (!value) {
+    return [];
+  }
+
+  const normalized = value.toUpperCase();
+  const compact = normalized.replace(/[\s-]/g, "");
+  const matches = new Set<string>();
+
+  const recordMatches = (text: string) => {
+    trackingPatterns.forEach((pattern) => {
+      const found = text.match(pattern);
+      if (found) {
+        found.forEach((match) => matches.add(match));
+      }
+    });
+  };
+
+  recordMatches(normalized);
+  recordMatches(compact);
+
+  return Array.from(matches);
+};
+
 const getTodayRange = () => {
   const now = new Date();
   const start = new Date(now);
@@ -80,6 +113,7 @@ export const HomePage = () => {
   const [note, setNote] = useState("");
   const [droppedFiles, setDroppedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const trackingNumbers = useMemo(() => extractTrackingNumbers(note), [note]);
 
   const handleFileSelection = (files: FileList | null) => {
     if (!files) {
@@ -516,6 +550,36 @@ export const HomePage = () => {
                 "& .MuiOutlinedInput-root": { borderRadius: 2 },
               }}
             />
+
+            <Stack
+              spacing={1}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid #e2e8f0",
+                p: 2,
+                bgcolor: "#f8fafc",
+              }}
+            >
+              <Typography variant="subtitle1" fontWeight={600}>
+                Detected tracking numbers
+              </Typography>
+              {trackingNumbers.length > 0 ? (
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  {trackingNumbers.map((trackingNumber) => (
+                    <Chip
+                      key={trackingNumber}
+                      label={trackingNumber}
+                      size="small"
+                      sx={{ fontWeight: 600, bgcolor: "#e2e8f0" }}
+                    />
+                  ))}
+                </Stack>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Paste a UPS, FedEx, or USPS tracking number in your note to detect it automatically.
+                </Typography>
+              )}
+            </Stack>
 
             <Stack
               spacing={2}
