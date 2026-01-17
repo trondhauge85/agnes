@@ -8,6 +8,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@agnes/shared": "workspace:*",
     "googleapis": "^140.0.0"
   },
   "devDependencies": {
