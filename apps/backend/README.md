@@ -14,6 +14,48 @@ The backend is split by responsibility so new features are easy to extend:
 - `src/llm/`: modular LLM integration (providers, tools, skills, prompts, context).
 - `src/types.ts`: shared domain types and payload definitions.
 
+## Runtime targets
+
+The core handler lives in `src/router.ts` so runtimes stay thin adapters. The
+repository includes adapters for:
+
+- Cloudflare Workers: `src/runtime/worker.ts`
+- Node.js (VMs, containers, k8s): `src/runtime/node.ts`
+
+## Cloudflare Workers setup
+
+The backend ships with a `wrangler.toml` and a worker entrypoint. To run the
+worker locally:
+
+```bash
+pnpm --filter @agnes/backend install
+pnpm --filter @agnes/backend dev:worker
+```
+
+To deploy to Cloudflare Workers:
+
+```bash
+pnpm --filter @agnes/backend deploy:worker
+```
+
+### Scheduled worker
+
+The worker config includes a cron trigger. Update the cron schedule in
+`apps/backend/wrangler.toml` and add the scheduled work in
+`src/scheduled.ts`.
+
+## Node/k8s runtime
+
+Use the Node runtime adapter to keep deployments portable. Start it locally or
+inside a container with:
+
+```bash
+pnpm --filter @agnes/backend dev
+```
+
+The server listens on `PORT` (default `3000`). For k8s, bake the same command
+into your container image and expose the port via a Service.
+
 ## Calendar endpoints
 
 The calendar routes provide a provider-agnostic REST surface while using Google

@@ -1,0 +1,7 @@
+name = "agnes-backend"
+main = "src/runtime/worker.ts"
+compatibility_date = "2024-10-15"
+nodejs_compat = true
+
+[triggers]
+crons = ["0 * * * *"]
