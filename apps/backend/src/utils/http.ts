@@ -1,3 +1,5 @@
+import type { ApiError, ApiErrorCode, ApiErrorDetails, ApiErrorResponse } from "@agnes/shared";
+
 export const jsonHeaders = {
   "cache-control": "no-store",
   "content-type": "application/json"
@@ -8,6 +10,34 @@ export const createJsonResponse = (payload: unknown, status = 200): Response =>
     status,
     headers: jsonHeaders
   });
+
+type CreateApiErrorOptions = {
+  code: ApiErrorCode;
+  message: string;
+  status: number;
+  messageKey?: string;
+  details?: ApiErrorDetails;
+};
+
+export const createApiError = ({
+  code,
+  message,
+  status,
+  messageKey,
+  details
+}: CreateApiErrorOptions): ApiError => ({
+  code,
+  message,
+  messageKey: messageKey ?? `errors.${code}`,
+  status,
+  details
+});
+
+export const createErrorResponse = (options: CreateApiErrorOptions): Response =>
+  createJsonResponse(
+    { error: createApiError(options) } satisfies ApiErrorResponse,
+    options.status
+  );
 
 export const parseJsonBody = async <T>(
   request: Request

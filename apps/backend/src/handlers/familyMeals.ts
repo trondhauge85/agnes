@@ -13,7 +13,7 @@ import {
   saveFamilyMeal,
   updateFamilyMeal
 } from "../data/familyMeals";
-import { createJsonResponse, parseJsonBody } from "../utils/http";
+import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
 import { normalizeString } from "../utils/strings";
 
 const allowedMealStatuses: FamilyMealStatus[] = [
@@ -143,7 +143,13 @@ export const handleFamilyMealList = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   return createJsonResponse({
@@ -158,45 +164,92 @@ export const handleFamilyMealCreate = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   const body = await parseJsonBody<FamilyMealCreatePayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const title = normalizeString(body.title ?? "");
   if (!title) {
-    return createJsonResponse({ error: "Meal title is required." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Meal title is required.",
+      messageKey: "errors.meal.title_required",
+      status: 400,
+      details: { field: "title", reason: "required" }
+    });
   }
 
   const status = normalizeMealStatus(body.status) ?? "planned";
   if (!status) {
-    return createJsonResponse({ error: "Unsupported meal status." }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: "Unsupported meal status.",
+      messageKey: "errors.meal.status_unsupported",
+      status: 422,
+      details: { field: "status", reason: "unsupported" }
+    });
   }
 
   const mealType = normalizeMealType(body.mealType) ?? "dinner";
   if (!mealType) {
-    return createJsonResponse({ error: "Unsupported meal type." }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: "Unsupported meal type.",
+      messageKey: "errors.meal.type_unsupported",
+      status: 422,
+      details: { field: "mealType", reason: "unsupported" }
+    });
   }
 
   const assignment = normalizeAssignment(familyId, body.assignedToUserId);
   if (assignment.error) {
-    return createJsonResponse({ error: assignment.error }, 400);
+    const isNotFound = assignment.error === "Family not found.";
+    return createErrorResponse({
+      code: isNotFound ? "not_found" : "bad_request",
+      message: assignment.error,
+      messageKey: isNotFound
+        ? "errors.family.not_found"
+        : "errors.meal.assignment_invalid",
+      status: isNotFound ? 404 : 400,
+      details: { assignedToUserId: body.assignedToUserId ?? null }
+    });
   }
 
   const scheduled = normalizeScheduledFor(body.scheduledFor);
   if (scheduled.error) {
-    return createJsonResponse({ error: scheduled.error }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: scheduled.error,
+      messageKey: "errors.meal.schedule_invalid",
+      status: 422,
+      details: { field: "scheduledFor", reason: "format" }
+    });
   }
 
   const servings = normalizeServings(body.servings);
   if (servings.error) {
-    return createJsonResponse({ error: servings.error }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: servings.error,
+      messageKey: "errors.meal.servings_invalid",
+      status: 422,
+      details: { field: "servings", reason: "range" }
+    });
   }
 
   const notes = normalizeString(body.notes ?? "");
@@ -232,26 +285,46 @@ export const handleFamilyMealUpdate = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   const existing = getFamilyMeal(familyId, mealId);
   if (!existing) {
-    return createJsonResponse({ error: "Meal not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Meal not found.",
+      messageKey: "errors.meal.not_found",
+      status: 404,
+      details: { mealId }
+    });
   }
 
   const body = await parseJsonBody<FamilyMealUpdatePayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const title =
     body.title === undefined ? undefined : normalizeString(body.title ?? "");
   if (title !== undefined && !title) {
-    return createJsonResponse({ error: "Meal title cannot be empty." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Meal title cannot be empty.",
+      messageKey: "errors.meal.title_empty",
+      status: 400,
+      details: { field: "title", reason: "empty" }
+    });
   }
 
   const status =
@@ -259,7 +332,13 @@ export const handleFamilyMealUpdate = async (
       ? undefined
       : normalizeMealStatus(body.status ?? "");
   if (body.status !== undefined && !status) {
-    return createJsonResponse({ error: "Unsupported meal status." }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: "Unsupported meal status.",
+      messageKey: "errors.meal.status_unsupported",
+      status: 422,
+      details: { field: "status", reason: "unsupported" }
+    });
   }
 
   const mealType =
@@ -267,22 +346,49 @@ export const handleFamilyMealUpdate = async (
       ? undefined
       : normalizeMealType(body.mealType ?? "");
   if (body.mealType !== undefined && !mealType) {
-    return createJsonResponse({ error: "Unsupported meal type." }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: "Unsupported meal type.",
+      messageKey: "errors.meal.type_unsupported",
+      status: 422,
+      details: { field: "mealType", reason: "unsupported" }
+    });
   }
 
   const assignment = normalizeAssignment(familyId, body.assignedToUserId);
   if (assignment.error) {
-    return createJsonResponse({ error: assignment.error }, 400);
+    const isNotFound = assignment.error === "Family not found.";
+    return createErrorResponse({
+      code: isNotFound ? "not_found" : "bad_request",
+      message: assignment.error,
+      messageKey: isNotFound
+        ? "errors.family.not_found"
+        : "errors.meal.assignment_invalid",
+      status: isNotFound ? 404 : 400,
+      details: { assignedToUserId: body.assignedToUserId ?? null }
+    });
   }
 
   const scheduled = normalizeScheduledFor(body.scheduledFor);
   if (scheduled.error) {
-    return createJsonResponse({ error: scheduled.error }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: scheduled.error,
+      messageKey: "errors.meal.schedule_invalid",
+      status: 422,
+      details: { field: "scheduledFor", reason: "format" }
+    });
   }
 
   const servings = normalizeServings(body.servings);
   if (servings.error) {
-    return createJsonResponse({ error: servings.error }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: servings.error,
+      messageKey: "errors.meal.servings_invalid",
+      status: 422,
+      details: { field: "servings", reason: "range" }
+    });
   }
 
   const notes =
@@ -325,7 +431,13 @@ export const handleFamilyMealUpdate = async (
   });
 
   if (!updated) {
-    return createJsonResponse({ error: "Meal not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Meal not found.",
+      messageKey: "errors.meal.not_found",
+      status: 404,
+      details: { mealId }
+    });
   }
 
   return createJsonResponse({
@@ -340,12 +452,24 @@ export const handleFamilyMealDelete = async (
 ): Promise<Response> => {
   const family = findFamily(familyId);
   if (!family) {
-    return createJsonResponse({ error: "Family not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
   }
 
   const removed = removeFamilyMeal(familyId, mealId);
   if (!removed) {
-    return createJsonResponse({ error: "Meal not found." }, 404);
+    return createErrorResponse({
+      code: "not_found",
+      message: "Meal not found.",
+      messageKey: "errors.meal.not_found",
+      status: 404,
+      details: { mealId }
+    });
   }
 
   return createJsonResponse({

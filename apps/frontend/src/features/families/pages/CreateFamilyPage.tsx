@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
+import { getApiErrorDescriptor } from "../../../shared/api";
 import { createFamily } from "../services/familyApi";
 import { saveFamily } from "../services/familyStorage";
 
@@ -111,7 +112,10 @@ export const CreateFamilyPage = () => {
   const [selectedDescriptors, setSelectedDescriptors] = useState<string[]>([]);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<{
+    message: string;
+    messageKey: string;
+  } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -167,7 +171,11 @@ export const CreateFamilyPage = () => {
         state: { familyId: response.family.id, familyName: response.family.name },
       });
     } catch (error) {
-      setErrorMessage("Something went sideways while creating the family. Try again in a sec.");
+      const descriptor = getApiErrorDescriptor(error);
+      setErrorMessage({
+        message: descriptor.message,
+        messageKey: descriptor.messageKey
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -268,7 +276,7 @@ export const CreateFamilyPage = () => {
               </Stack>
             </Stack>
 
-            {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
+            {errorMessage ? <Alert severity="error">{errorMessage.message}</Alert> : null}
             {successMessage ? <Alert severity="success">{successMessage}</Alert> : null}
 
             <Button

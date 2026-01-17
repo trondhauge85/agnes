@@ -27,7 +27,7 @@ import {
   listGoogleEvents,
   updateGoogleEvent
 } from "../integrations/googleCalendar";
-import { createJsonResponse, parseJsonBody } from "../utils/http";
+import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
 import { normalizeString } from "../utils/strings";
 
 const supportedProviders: CalendarProvider[] = ["google"];
@@ -165,22 +165,36 @@ export const handleCalendarSetup = async (
 ): Promise<Response> => {
   const body = await parseJsonBody<CalendarSetupPayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const provider = ensureProvider(normalizeString(body.provider ?? ""));
   if (!provider) {
-    return createJsonResponse({ error: "Unsupported calendar provider." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported calendar provider.",
+      messageKey: "errors.calendar.provider_unsupported",
+      status: 400,
+      details: { provider: body.provider }
+    });
   }
 
   if (!body.authorizationCode || !body.redirectUri) {
-    return createJsonResponse(
-      { error: "authorizationCode and redirectUri are required." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "authorizationCode and redirectUri are required.",
+      messageKey: "errors.calendar.authorization_required",
+      status: 400,
+      details: {
+        fields: ["authorizationCode", "redirectUri"],
+        reason: "required"
+      }
+    });
   }
 
   try {
@@ -207,15 +221,24 @@ export const handleCalendarList = async (
   const providerParam = normalizeString(url.searchParams.get("provider") ?? "");
   const provider = ensureProvider(providerParam || "google");
   if (!provider) {
-    return createJsonResponse({ error: "Unsupported calendar provider." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported calendar provider.",
+      messageKey: "errors.calendar.provider_unsupported",
+      status: 400,
+      details: { provider: providerParam }
+    });
   }
 
   const connection = ensureConnected(provider);
   if (!connection) {
-    return createJsonResponse(
-      { error: "Calendar provider is not connected." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "Calendar provider is not connected.",
+      messageKey: "errors.calendar.not_connected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   try {
@@ -235,23 +258,34 @@ export const handleCalendarSelect = async (
 ): Promise<Response> => {
   const body = await parseJsonBody<CalendarSelectPayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const provider = ensureProvider(normalizeString(body.provider ?? ""));
   if (!provider) {
-    return createJsonResponse({ error: "Unsupported calendar provider." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported calendar provider.",
+      messageKey: "errors.calendar.provider_unsupported",
+      status: 400,
+      details: { provider: body.provider }
+    });
   }
 
   const connection = ensureConnected(provider);
   if (!connection) {
-    return createJsonResponse(
-      { error: "Calendar provider is not connected." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "Calendar provider is not connected.",
+      messageKey: "errors.calendar.not_connected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   let calendar: CalendarInfo | null = null;
@@ -262,10 +296,13 @@ export const handleCalendarSelect = async (
     } else {
       const name = normalizeString(body.name ?? "");
       if (!name) {
-        return createJsonResponse(
-          { error: "calendarId or name is required." },
-          400
-        );
+        return createErrorResponse({
+          code: "bad_request",
+          message: "calendarId or name is required.",
+          messageKey: "errors.calendar.select_required",
+          status: 400,
+          details: { fields: ["calendarId", "name"], reason: "required" }
+        });
       }
 
       calendar = await createGoogleCalendar(
@@ -293,45 +330,68 @@ export const handleCalendarEventCreate = async (
 ): Promise<Response> => {
   const body = await parseJsonBody<CalendarEventCreatePayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const url = new URL(request.url);
   const providerParam = normalizeString(url.searchParams.get("provider") ?? "");
   const provider = ensureProvider(providerParam || "google");
   if (!provider) {
-    return createJsonResponse({ error: "Unsupported calendar provider." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported calendar provider.",
+      messageKey: "errors.calendar.provider_unsupported",
+      status: 400,
+      details: { provider: providerParam }
+    });
   }
 
   const connection = ensureConnected(provider);
   if (!connection) {
-    return createJsonResponse(
-      { error: "Calendar provider is not connected." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "Calendar provider is not connected.",
+      messageKey: "errors.calendar.not_connected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   const calendarId = ensureSelectedCalendar(provider);
   if (!calendarId) {
-    return createJsonResponse(
-      { error: "No calendar selected for provider." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "No calendar selected for provider.",
+      messageKey: "errors.calendar.not_selected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   const title = normalizeString(body.title ?? "");
   if (!title) {
-    return createJsonResponse({ error: "Event title is required." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Event title is required.",
+      messageKey: "errors.calendar.event_title_required",
+      status: 400,
+      details: { field: "title", reason: "required" }
+    });
   }
 
   if (!body.start?.dateTime || !body.end?.dateTime) {
-    return createJsonResponse(
-      { error: "Event start and end dateTime are required." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Event start and end dateTime are required.",
+      messageKey: "errors.calendar.event_datetime_required",
+      status: 400,
+      details: { fields: ["start.dateTime", "end.dateTime"], reason: "required" }
+    });
   }
 
   const event: CalendarEvent = {
@@ -364,33 +424,47 @@ export const handleCalendarEventUpdate = async (
 ): Promise<Response> => {
   const body = await parseJsonBody<CalendarEventUpdatePayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   const url = new URL(request.url);
   const providerParam = normalizeString(url.searchParams.get("provider") ?? "");
   const provider = ensureProvider(providerParam || "google");
   if (!provider) {
-    return createJsonResponse({ error: "Unsupported calendar provider." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported calendar provider.",
+      messageKey: "errors.calendar.provider_unsupported",
+      status: 400,
+      details: { provider: providerParam }
+    });
   }
 
   const connection = ensureConnected(provider);
   if (!connection) {
-    return createJsonResponse(
-      { error: "Calendar provider is not connected." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "Calendar provider is not connected.",
+      messageKey: "errors.calendar.not_connected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   const calendarId = ensureSelectedCalendar(provider);
   if (!calendarId) {
-    return createJsonResponse(
-      { error: "No calendar selected for provider." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "No calendar selected for provider.",
+      messageKey: "errors.calendar.not_selected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   const updatePayload: Partial<CalendarEvent> = {
@@ -430,23 +504,35 @@ export const handleCalendarEventDelete = async (
   const providerParam = normalizeString(url.searchParams.get("provider") ?? "");
   const provider = ensureProvider(providerParam || "google");
   if (!provider) {
-    return createJsonResponse({ error: "Unsupported calendar provider." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported calendar provider.",
+      messageKey: "errors.calendar.provider_unsupported",
+      status: 400,
+      details: { provider: providerParam }
+    });
   }
 
   const connection = ensureConnected(provider);
   if (!connection) {
-    return createJsonResponse(
-      { error: "Calendar provider is not connected." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "Calendar provider is not connected.",
+      messageKey: "errors.calendar.not_connected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   const calendarId = ensureSelectedCalendar(provider);
   if (!calendarId) {
-    return createJsonResponse(
-      { error: "No calendar selected for provider." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "No calendar selected for provider.",
+      messageKey: "errors.calendar.not_selected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   try {
@@ -464,23 +550,35 @@ export const handleCalendarEventList = async (
   const providerParam = normalizeString(url.searchParams.get("provider") ?? "");
   const provider = ensureProvider(providerParam || "google");
   if (!provider) {
-    return createJsonResponse({ error: "Unsupported calendar provider." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported calendar provider.",
+      messageKey: "errors.calendar.provider_unsupported",
+      status: 400,
+      details: { provider: providerParam }
+    });
   }
 
   const connection = ensureConnected(provider);
   if (!connection) {
-    return createJsonResponse(
-      { error: "Calendar provider is not connected." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "Calendar provider is not connected.",
+      messageKey: "errors.calendar.not_connected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   const calendarId = ensureSelectedCalendar(provider);
   if (!calendarId) {
-    return createJsonResponse(
-      { error: "No calendar selected for provider." },
-      409
-    );
+    return createErrorResponse({
+      code: "conflict",
+      message: "No calendar selected for provider.",
+      messageKey: "errors.calendar.not_selected",
+      status: 409,
+      details: { provider }
+    });
   }
 
   const filters = normalizeEventFilters(url);
@@ -527,10 +625,20 @@ const extractGoogleApiError = (error: unknown): string | null => {
 
 const createCalendarErrorResponse = (error: unknown): Response => {
   if (error instanceof GoogleCalendarConfigError) {
-    return createJsonResponse({ error: error.message }, 500);
+    return createErrorResponse({
+      code: "internal_error",
+      message: error.message,
+      messageKey: "errors.calendar.configuration",
+      status: 500
+    });
   }
 
   const message =
     extractGoogleApiError(error) ?? "Google Calendar request failed.";
-  return createJsonResponse({ error: message }, 502);
+  return createErrorResponse({
+    code: "bad_gateway",
+    message,
+    messageKey: "errors.calendar.provider_error",
+    status: 502
+  });
 };

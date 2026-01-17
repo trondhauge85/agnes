@@ -5,7 +5,7 @@ import type {
   OAuthProvider,
   OAuthStartPayload
 } from "../types";
-import { createJsonResponse, parseJsonBody } from "../utils/http";
+import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
 import { isEmail } from "../utils/strings";
 
 const oauthProviders: OAuthProvider[] = ["apple", "google", "facebook"];
@@ -40,24 +40,32 @@ export const handleProviders = (): Response =>
 export const handleOAuthStart = async (request: Request): Promise<Response> => {
   const body = await parseJsonBody<OAuthStartPayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   if (!oauthProviders.includes(body.provider)) {
-    return createJsonResponse(
-      { error: "Unsupported OAuth provider.", provider: body.provider },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported OAuth provider.",
+      messageKey: "errors.auth.oauth_provider_unsupported",
+      status: 400,
+      details: { provider: body.provider }
+    });
   }
 
   if (!body.redirectUri) {
-    return createJsonResponse(
-      { error: "redirectUri is required for OAuth starts." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "redirectUri is required for OAuth starts.",
+      messageKey: "errors.auth.redirect_uri_required",
+      status: 400,
+      details: { field: "redirectUri", reason: "required" }
+    });
   }
 
   const encodedState = body.state ?? crypto.randomUUID();
@@ -79,21 +87,32 @@ export const handleOAuthStart = async (request: Request): Promise<Response> => {
 export const handleEmailStart = async (request: Request): Promise<Response> => {
   const body = await parseJsonBody<EmailStartPayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   if (!isEmail(body.email)) {
-    return createJsonResponse({ error: "Invalid email address." }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: "Invalid email address.",
+      messageKey: "errors.auth.invalid_email",
+      status: 422,
+      details: { field: "email", reason: "format" }
+    });
   }
 
   if (!emailActions.includes(body.action)) {
-    return createJsonResponse(
-      { error: "Unsupported email action.", action: body.action },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported email action.",
+      messageKey: "errors.auth.email_action_unsupported",
+      status: 400,
+      details: { action: body.action }
+    });
   }
 
   return createJsonResponse({
@@ -109,18 +128,32 @@ export const handleEmailStart = async (request: Request): Promise<Response> => {
 export const handleEmailVerify = async (request: Request): Promise<Response> => {
   const body = await parseJsonBody<EmailVerifyPayload>(request);
   if (!body) {
-    return createJsonResponse(
-      { error: "Expected application/json payload." },
-      400
-    );
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
   }
 
   if (!isEmail(body.email)) {
-    return createJsonResponse({ error: "Invalid email address." }, 400);
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: "Invalid email address.",
+      messageKey: "errors.auth.invalid_email",
+      status: 422,
+      details: { field: "email", reason: "format" }
+    });
   }
 
   if (!body.code) {
-    return createJsonResponse({ error: "Verification code is required." }, 400);
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Verification code is required.",
+      messageKey: "errors.auth.verification_code_required",
+      status: 400,
+      details: { field: "code", reason: "required" }
+    });
   }
 
   return createJsonResponse({

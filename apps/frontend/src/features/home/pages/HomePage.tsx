@@ -27,6 +27,7 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { clearSession } from "../../auth/services/authStorage";
+import { getApiErrorDescriptor } from "../../../shared/api";
 import type { StoredFamily } from "../../families/services/familyStorage";
 import {
   getSelectedFamilyId,
@@ -65,8 +66,14 @@ export const HomePage = () => {
   const [todos, setTodos] = useState<FamilyTodo[]>([]);
   const [meals, setMeals] = useState<FamilyMeal[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [familyError, setFamilyError] = useState<string | null>(null);
-  const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [familyError, setFamilyError] = useState<{
+    message: string;
+    messageKey: string;
+  } | null>(null);
+  const [calendarError, setCalendarError] = useState<{
+    message: string;
+    messageKey: string;
+  } | null>(null);
   const [isLoadingFamily, setIsLoadingFamily] = useState(false);
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -103,7 +110,11 @@ export const HomePage = () => {
     fetchCalendarEvents({ start: todayRange.start, end: todayRange.end, limit: 12 })
       .then((response) => setEvents(response.events))
       .catch((error) => {
-        setCalendarError(error instanceof Error ? error.message : "Calendar data is unavailable.");
+        const descriptor = getApiErrorDescriptor(error);
+        setCalendarError({
+          message: descriptor.message,
+          messageKey: descriptor.messageKey
+        });
         setEvents([]);
       })
       .finally(() => setIsLoadingCalendar(false));
@@ -124,7 +135,11 @@ export const HomePage = () => {
         setMeals(mealResponse.meals);
       })
       .catch((error) => {
-        setFamilyError(error instanceof Error ? error.message : "Family data is unavailable.");
+        const descriptor = getApiErrorDescriptor(error);
+        setFamilyError({
+          message: descriptor.message,
+          messageKey: descriptor.messageKey
+        });
         setTodos([]);
         setMeals([]);
       })
@@ -263,12 +278,12 @@ export const HomePage = () => {
                 </Stack>
                 {familyError ? (
                   <Typography variant="body2" color="error">
-                    {familyError}
+                    {familyError.message}
                   </Typography>
                 ) : null}
                 {calendarError ? (
                   <Typography variant="body2" color="error">
-                    {calendarError}
+                    {calendarError.message}
                   </Typography>
                 ) : null}
               </Stack>
