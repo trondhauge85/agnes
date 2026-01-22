@@ -59,12 +59,14 @@ into your container image and expose the port via a Service.
 ## Database & migrations
 
 The backend now ships with a lightweight SQL migration runner that works with
-SQLite locally and Postgres in production. Configure the database provider with
-environment variables:
+SQLite locally, Postgres in production, and Cloudflare D1 in workers. Configure
+the database provider with environment variables or bindings:
 
-- `DB_PROVIDER`: `sqlite` (default) or `postgres`.
+- `DB_PROVIDER`: `sqlite` (default), `postgres`, or `d1`.
 - `SQLITE_PATH`: path to the SQLite file (default `data/agnes.sqlite`).
 - `DATABASE_URL` / `POSTGRES_URL`: connection string for Postgres.
+- `D1_DATABASE`: Cloudflare worker binding for D1 (passed to the database
+  adapter when `DB_PROVIDER=d1`).
 
 Run migrations locally with:
 
