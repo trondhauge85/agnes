@@ -2,7 +2,7 @@ import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { Pool } from "pg";
-import { loadDatabaseConfig, type DatabaseConfig } from "./config";
+import { loadDatabaseConfig, type DatabaseConfig, type D1Database } from "./config";
 
 export type DatabaseAdapter = {
   execute: (sql: string) => Promise<void>;
@@ -108,11 +108,45 @@ const createPostgresAdapter = (config: DatabaseConfig): DatabaseAdapter => {
   };
 };
 
+const createD1Adapter = (database: D1Database | null): DatabaseAdapter => {
+  if (!database) {
+    throw new Error("D1 adapter requires a bound D1 database.");
+  }
+
+  const adapter: DatabaseAdapter = {
+    execute: async (sql) => {
+      await database.exec(sql);
+    },
+    query: async (sql) => {
+      const result = await database.prepare(sql).all();
+      return result.results as Record<string, unknown>[];
+    },
+    transaction: async (fn) => {
+      await adapter.execute("BEGIN");
+      try {
+        const result = await fn(adapter);
+        await adapter.execute("COMMIT");
+        return result;
+      } catch (error) {
+        await adapter.execute("ROLLBACK");
+        throw error;
+      }
+    },
+    close: async () => undefined
+  };
+
+  return adapter;
+};
+
 export const createDatabaseAdapter = async (
   config: DatabaseConfig = loadDatabaseConfig()
 ): Promise<DatabaseAdapter> => {
   if (config.provider === "postgres") {
     return createPostgresAdapter(config);
+  }
+
+  if (config.provider === "d1") {
+    return createD1Adapter(config.d1Database);
   }
 
   if (!config.sqlitePath) {
