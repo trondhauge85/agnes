@@ -56,6 +56,26 @@ pnpm --filter @agnes/backend dev
 The server listens on `PORT` (default `3000`). For k8s, bake the same command
 into your container image and expose the port via a Service.
 
+## Database & migrations
+
+The backend now ships with a lightweight SQL migration runner that works with
+SQLite locally and Postgres in production. Configure the database provider with
+environment variables:
+
+- `DB_PROVIDER`: `sqlite` (default) or `postgres`.
+- `SQLITE_PATH`: path to the SQLite file (default `data/agnes.sqlite`).
+- `DATABASE_URL` / `POSTGRES_URL`: connection string for Postgres.
+
+Run migrations locally with:
+
+```bash
+pnpm --filter @agnes/backend db:migrate
+```
+
+Migration files live in `src/db/migrations` and are applied in filename order.
+The schema is tracked in the `schema_migrations` table so providers can be
+swapped without changing the migration workflow.
+
 ## Calendar endpoints
 
 The calendar routes provide a provider-agnostic REST surface while using Google
