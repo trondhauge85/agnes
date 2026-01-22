@@ -5,6 +5,8 @@ import type {
   OAuthProvider,
   OAuthStartPayload
 } from "../types";
+import { createEmailAuthRequest, verifyEmailAuthRequest } from "../db/emailAuth";
+import { getDatabaseAdapter } from "../db/client";
 import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
 import { isEmail } from "../utils/strings";
 
@@ -115,11 +117,18 @@ export const handleEmailStart = async (request: Request): Promise<Response> => {
     });
   }
 
+  const email = body.email.toLowerCase();
+  const adapter = await getDatabaseAdapter();
+  const record = await createEmailAuthRequest(adapter, email, body.action);
+
   return createJsonResponse({
     status: "pending",
     provider: "email",
     action: body.action,
-    email: body.email.toLowerCase(),
+    email,
+    requestId: record.id,
+    expiresAt: record.expiresAt,
+    verificationCode: record.code,
     message:
       "Email authentication started. Wire this to your email service to send a code or magic link."
   });
@@ -156,10 +165,25 @@ export const handleEmailVerify = async (request: Request): Promise<Response> => 
     });
   }
 
+  const email = body.email.toLowerCase();
+  const adapter = await getDatabaseAdapter();
+  const match = await verifyEmailAuthRequest(adapter, email, body.code);
+
+  if (!match) {
+    return createErrorResponse({
+      code: "unauthorized",
+      message: "Invalid or expired verification code.",
+      messageKey: "errors.auth.invalid_verification_code",
+      status: 401,
+      details: { email }
+    });
+  }
+
   return createJsonResponse({
     status: "verified",
     provider: "email",
-    email: body.email.toLowerCase(),
+    email: match.email,
+    action: match.action,
     sessionToken: crypto.randomUUID(),
     message:
       "Email verification is scaffolded. Replace sessionToken with a real session."
