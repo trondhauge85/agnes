@@ -4,11 +4,25 @@ import type {
   CalendarInfo,
   CalendarProvider
 } from "../types";
+import type { DatabaseAdapter } from "../db/adapter";
+import { getDatabaseAdapter } from "../db/client";
 
 const calendarConnections = new Map<CalendarProvider, CalendarConnection>();
 const calendarsByProvider = new Map<CalendarProvider, Map<string, CalendarInfo>>();
 const selectedCalendars = new Map<CalendarProvider, string>();
 const eventsByCalendar = new Map<string, Map<string, CalendarEvent>>();
+
+type CalendarSelectionRow = {
+  provider: CalendarProvider;
+  calendar_id: string;
+  updated_at: string;
+};
+
+const escapeLiteral = (value: string): string => `'${value.replace(/'/g, "''")}'`;
+
+const getAdapter = async (
+  adapter?: DatabaseAdapter
+): Promise<DatabaseAdapter> => adapter ?? getDatabaseAdapter();
 
 const getCalendarStore = (provider: CalendarProvider): Map<string, CalendarInfo> => {
   const existing = calendarsByProvider.get(provider);
@@ -61,14 +75,53 @@ export const getCalendarById = (
 
 export const setSelectedCalendar = (
   provider: CalendarProvider,
-  calendarId: string
-): void => {
+  calendarId: string,
+  adapter?: DatabaseAdapter
+): Promise<void> => {
   selectedCalendars.set(provider, calendarId);
+  const now = new Date().toISOString();
+  return getAdapter(adapter).then((db) =>
+    db.execute(
+      `INSERT INTO calendar_selections (
+        provider,
+        calendar_id,
+        updated_at
+      ) VALUES (
+        ${escapeLiteral(provider)},
+        ${escapeLiteral(calendarId)},
+        ${escapeLiteral(now)}
+      )
+      ON CONFLICT(provider) DO UPDATE SET
+        calendar_id = excluded.calendar_id,
+        updated_at = excluded.updated_at`
+    )
+  );
 };
 
 export const getSelectedCalendarId = (
-  provider: CalendarProvider
-): string | null => selectedCalendars.get(provider) ?? null;
+  provider: CalendarProvider,
+  adapter?: DatabaseAdapter
+): Promise<string | null> => {
+  const cached = selectedCalendars.get(provider);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+
+  return getAdapter(adapter).then(async (db) => {
+    const rows = await db.query<CalendarSelectionRow>(
+      `SELECT provider, calendar_id, updated_at
+       FROM calendar_selections
+       WHERE provider = ${escapeLiteral(provider)}
+       LIMIT 1`
+    );
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+    selectedCalendars.set(provider, row.calendar_id);
+    return row.calendar_id;
+  });
+};
 
 export const saveEvent = (calendarId: string, event: CalendarEvent): void => {
   const store = getEventStore(calendarId);

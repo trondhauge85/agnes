@@ -59,16 +59,21 @@ export const createFamilySummaryDataFetcher = (
     calendarProvider = "google"
   } = deps;
 
-  return (familyId: string, period: SummaryPeriod): FamilySummaryData => {
-    const todos = listTodos(familyId).filter((todo) => todo.status === "open");
-    const meals = listMeals(familyId).filter((meal) =>
+  return async (
+    familyId: string,
+    period: SummaryPeriod
+  ): Promise<FamilySummaryData> => {
+    const todos = (await listTodos(familyId)).filter(
+      (todo) => todo.status === "open"
+    );
+    const meals = (await listMeals(familyId)).filter((meal) =>
       isWithinRange(meal.scheduledFor, period)
     );
-    const shoppingList = listShoppingItems(familyId).filter(
+    const shoppingList = (await listShoppingItems(familyId)).filter(
       (item) => item.status === "open"
     );
 
-    const calendarId = getSelectedCalendar(calendarProvider);
+    const calendarId = await getSelectedCalendar(calendarProvider);
     const events = calendarId
       ? listCalendarEvents(calendarId).filter((event) =>
           overlapsPeriod(event, period)

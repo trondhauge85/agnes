@@ -43,8 +43,9 @@ const ensureConnected = (
   provider: CalendarProvider
 ): CalendarConnection | null => getCalendarConnection(provider);
 
-const ensureSelectedCalendar = (provider: CalendarProvider): string | null =>
-  getSelectedCalendarId(provider);
+const ensureSelectedCalendar = async (
+  provider: CalendarProvider
+): Promise<string | null> => getSelectedCalendarId(provider);
 
 const normalizeParticipant = (
   participant: CalendarParticipant
@@ -246,7 +247,7 @@ export const handleCalendarList = async (
     return createJsonResponse({
       provider,
       calendars,
-      selectedCalendarId: getSelectedCalendarId(provider)
+      selectedCalendarId: await getSelectedCalendarId(provider)
     });
   } catch (error) {
     return createCalendarErrorResponse(error);
@@ -313,7 +314,7 @@ export const handleCalendarSelect = async (
       );
     }
 
-    setSelectedCalendar(provider, calendar.id);
+    await setSelectedCalendar(provider, calendar.id);
 
     return createJsonResponse({
       status: "selected",
@@ -362,7 +363,7 @@ export const handleCalendarEventCreate = async (
     });
   }
 
-  const calendarId = ensureSelectedCalendar(provider);
+  const calendarId = await ensureSelectedCalendar(provider);
   if (!calendarId) {
     return createErrorResponse({
       code: "conflict",
@@ -456,7 +457,7 @@ export const handleCalendarEventUpdate = async (
     });
   }
 
-  const calendarId = ensureSelectedCalendar(provider);
+  const calendarId = await ensureSelectedCalendar(provider);
   if (!calendarId) {
     return createErrorResponse({
       code: "conflict",
@@ -524,7 +525,7 @@ export const handleCalendarEventDelete = async (
     });
   }
 
-  const calendarId = ensureSelectedCalendar(provider);
+  const calendarId = await ensureSelectedCalendar(provider);
   if (!calendarId) {
     return createErrorResponse({
       code: "conflict",
@@ -570,7 +571,7 @@ export const handleCalendarEventList = async (
     });
   }
 
-  const calendarId = ensureSelectedCalendar(provider);
+  const calendarId = await ensureSelectedCalendar(provider);
   if (!calendarId) {
     return createErrorResponse({
       code: "conflict",

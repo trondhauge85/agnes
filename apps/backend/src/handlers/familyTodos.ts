@@ -36,10 +36,10 @@ const normalizeTodoStatus = (
   return normalized as FamilyTodoStatus;
 };
 
-const normalizeAssignment = (
+const normalizeAssignment = async (
   familyId: string,
   assignedToUserId: string | null | undefined
-): { assignedToUserId?: string; error?: string } => {
+): Promise<{ assignedToUserId?: string; error?: string }> => {
   if (assignedToUserId === undefined) {
     return {};
   }
@@ -82,7 +82,7 @@ export const handleFamilyTodoList = async (
 
   return createJsonResponse({
     familyId,
-    todos: listFamilyTodos(familyId)
+    todos: await listFamilyTodos(familyId)
   });
 };
 
@@ -133,7 +133,7 @@ export const handleFamilyTodoCreate = async (
     });
   }
 
-  const { assignedToUserId, error } = normalizeAssignment(
+  const { assignedToUserId, error } = await normalizeAssignment(
     familyId,
     body.assignedToUserId
   );
@@ -163,7 +163,7 @@ export const handleFamilyTodoCreate = async (
     updatedAt: now
   };
 
-  saveFamilyTodo(familyId, todo);
+  await saveFamilyTodo(familyId, todo);
 
   return createJsonResponse({
     status: "created",
@@ -187,7 +187,7 @@ export const handleFamilyTodoUpdate = async (
     });
   }
 
-  const existing = getFamilyTodo(familyId, todoId);
+  const existing = await getFamilyTodo(familyId, todoId);
   if (!existing) {
     return createErrorResponse({
       code: "not_found",
@@ -234,7 +234,7 @@ export const handleFamilyTodoUpdate = async (
     });
   }
 
-  const assignment = normalizeAssignment(familyId, body.assignedToUserId);
+  const assignment = await normalizeAssignment(familyId, body.assignedToUserId);
   if (assignment.error) {
     const isNotFound = assignment.error === "Family not found.";
     return createErrorResponse({
@@ -251,7 +251,7 @@ export const handleFamilyTodoUpdate = async (
   const notes =
     body.notes === undefined ? undefined : normalizeString(body.notes ?? "");
 
-  const updated = updateFamilyTodo(familyId, todoId, (todo) => {
+  const updated = await updateFamilyTodo(familyId, todoId, (todo) => {
     const nextAssignedTo =
       body.assignedToUserId === undefined
         ? todo.assignedToUserId
@@ -301,7 +301,7 @@ export const handleFamilyTodoDelete = async (
     });
   }
 
-  const removed = removeFamilyTodo(familyId, todoId);
+  const removed = await removeFamilyTodo(familyId, todoId);
   if (!removed) {
     return createErrorResponse({
       code: "not_found",

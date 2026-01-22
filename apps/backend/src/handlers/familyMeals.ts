@@ -66,10 +66,10 @@ const normalizeMealType = (
   return normalized as FamilyMealType;
 };
 
-const normalizeAssignment = (
+const normalizeAssignment = async (
   familyId: string,
   assignedToUserId: string | null | undefined
-): { assignedToUserId?: string; error?: string } => {
+): Promise<{ assignedToUserId?: string; error?: string }> => {
   if (assignedToUserId === undefined) {
     return {};
   }
@@ -154,7 +154,7 @@ export const handleFamilyMealList = async (
 
   return createJsonResponse({
     familyId,
-    meals: listFamilyMeals(familyId)
+    meals: await listFamilyMeals(familyId)
   });
 };
 
@@ -216,7 +216,7 @@ export const handleFamilyMealCreate = async (
     });
   }
 
-  const assignment = normalizeAssignment(familyId, body.assignedToUserId);
+  const assignment = await normalizeAssignment(familyId, body.assignedToUserId);
   if (assignment.error) {
     const isNotFound = assignment.error === "Family not found.";
     return createErrorResponse({
@@ -270,7 +270,7 @@ export const handleFamilyMealCreate = async (
     updatedAt: now
   };
 
-  saveFamilyMeal(familyId, meal);
+  await saveFamilyMeal(familyId, meal);
 
   return createJsonResponse({
     status: "created",
@@ -294,7 +294,7 @@ export const handleFamilyMealUpdate = async (
     });
   }
 
-  const existing = getFamilyMeal(familyId, mealId);
+  const existing = await getFamilyMeal(familyId, mealId);
   if (!existing) {
     return createErrorResponse({
       code: "not_found",
@@ -355,7 +355,7 @@ export const handleFamilyMealUpdate = async (
     });
   }
 
-  const assignment = normalizeAssignment(familyId, body.assignedToUserId);
+  const assignment = await normalizeAssignment(familyId, body.assignedToUserId);
   if (assignment.error) {
     const isNotFound = assignment.error === "Family not found.";
     return createErrorResponse({
@@ -398,7 +398,7 @@ export const handleFamilyMealUpdate = async (
       ? undefined
       : normalizeString(body.recipeUrl ?? "");
 
-  const updated = updateFamilyMeal(familyId, mealId, (meal) => {
+  const updated = await updateFamilyMeal(familyId, mealId, (meal) => {
     const nextAssignedTo =
       body.assignedToUserId === undefined
         ? meal.assignedToUserId
@@ -461,7 +461,7 @@ export const handleFamilyMealDelete = async (
     });
   }
 
-  const removed = removeFamilyMeal(familyId, mealId);
+  const removed = await removeFamilyMeal(familyId, mealId);
   if (!removed) {
     return createErrorResponse({
       code: "not_found",

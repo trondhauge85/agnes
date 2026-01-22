@@ -40,7 +40,7 @@ const formatItems = (items: string[]): string =>
 const buildSummaryInput = (
   family: Family,
   period: SummaryPeriod,
-  data: ReturnType<ReturnType<typeof createFamilySummaryDataFetcher>>
+  data: Awaited<ReturnType<ReturnType<typeof createFamilySummaryDataFetcher>>>
 ): Record<string, string> => ({
   familyName: family.name,
   periodLabel: period.label,
@@ -89,7 +89,7 @@ export const createSummaryWorker = (deps: SummaryWorkerDependencies) => {
     family: Family,
     period: SummaryPeriod
   ): Promise<void> => {
-    const data = fetchSummaryData(family.id, period);
+    const data = await fetchSummaryData(family.id, period);
     const input = buildSummaryInput(family, period, data);
     const result = await llmService.runTask({
       skillName: "family_summary_sms",
