@@ -37,6 +37,12 @@ import {
   handleFamilyProjectList,
   handleFamilyProjectUpdate
 } from "./handlers/familyProjects";
+import {
+  handleFinancialAccounts,
+  handleFinancialImport,
+  handleFinancialProviders,
+  handleFinancialTransactions
+} from "./handlers/financial";
 import { handleRoot, notFound } from "./handlers/root";
 import { configureLogging, createLogger } from "@agnes/shared";
 
@@ -107,6 +113,22 @@ export const handler = async (request: Request): Promise<Response> => {
     if (request.method === "DELETE") {
       return handleCalendarEventDelete(request, calendarEventMatch[1]);
     }
+  }
+
+  if (request.method === "GET" && pathname === "/finance/providers") {
+    return handleFinancialProviders();
+  }
+
+  if (request.method === "POST" && pathname === "/finance/import") {
+    return handleFinancialImport(request);
+  }
+
+  if (request.method === "GET" && pathname === "/finance/accounts") {
+    return handleFinancialAccounts(request);
+  }
+
+  if (request.method === "GET" && pathname === "/finance/transactions") {
+    return handleFinancialTransactions(request);
   }
 
   if (request.method === "POST" && pathname === "/families") {

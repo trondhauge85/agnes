@@ -393,3 +393,50 @@ export type SmsProvider = {
   sendSms: (payload: SmsSendPayload) => Promise<SmsProviderResult>;
   sendGroupSms: (payload: SmsSendGroupPayload) => Promise<SmsProviderResult>;
 };
+
+export type FinancialProvider = "sparebanken1";
+
+export type FinancialAccountType = "savings" | "spending" | "funds";
+
+export type FinancialAccount = {
+  id: string;
+  userId: string;
+  source: FinancialProvider;
+  sourceId: string;
+  name: string;
+  type: FinancialAccountType;
+  currency: string;
+  balance: number;
+  availableBalance?: number;
+  updatedAt: string;
+  createdAt: string;
+};
+
+export type FinancialTransactionStatus = "booked" | "pending";
+
+export type FinancialTransaction = {
+  id: string;
+  userId: string;
+  accountId: string;
+  source: FinancialProvider;
+  sourceId: string;
+  amount: number;
+  currency: string;
+  description?: string;
+  bookingDate: string;
+  valueDate?: string;
+  status: FinancialTransactionStatus;
+  category?: string;
+  createdAt: string;
+};
+
+export type FinancialImportPayload = {
+  provider: FinancialProvider;
+  userId: string;
+  data: unknown;
+};
+
+export type FinancialImportResult = {
+  accounts: FinancialAccount[];
+  transactions: FinancialTransaction[];
+};
