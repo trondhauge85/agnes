@@ -19,6 +19,14 @@ export type EmailVerifyPayload = {
   code: string;
 };
 
+export type User = {
+  id: string;
+  displayName: string;
+  phoneNumber?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type FamilyRole = "owner" | "admin" | "member";
 
 export type FamilyMember = {

@@ -83,7 +83,7 @@ const normalizeAssignment = (
     return { assignedToUserId: undefined };
   }
 
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return { error: "Family not found." };
   }
@@ -141,7 +141,7 @@ const normalizeServings = (
 export const handleFamilyMealList = async (
   familyId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",
@@ -162,7 +162,7 @@ export const handleFamilyMealCreate = async (
   request: Request,
   familyId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",
@@ -283,7 +283,7 @@ export const handleFamilyMealUpdate = async (
   familyId: string,
   mealId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",
@@ -450,7 +450,7 @@ export const handleFamilyMealDelete = async (
   familyId: string,
   mealId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",

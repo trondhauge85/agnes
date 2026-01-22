@@ -179,7 +179,7 @@ const normalizeTimeframe = (
 export const handleFamilyProjectList = async (
   familyId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",
@@ -200,7 +200,7 @@ export const handleFamilyProjectCreate = async (
   request: Request,
   familyId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",
@@ -319,7 +319,7 @@ export const handleFamilyProjectUpdate = async (
   familyId: string,
   projectId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",
@@ -455,7 +455,7 @@ export const handleFamilyProjectDelete = async (
   familyId: string,
   projectId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",

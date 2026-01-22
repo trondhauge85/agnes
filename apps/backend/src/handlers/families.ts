@@ -7,13 +7,17 @@ import type {
   FamilyMetadata
 } from "../types";
 import {
+  addFamilyMember,
   canAddMembers,
   familyRoles,
   findFamily,
   getMemberById,
+  removeFamilyMember,
   saveFamily,
   serializeFamily
 } from "../data/families";
+import { upsertUser } from "../data/users";
+import { getDatabaseAdapter } from "../db/client";
 import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
 import { normalizeString, normalizeStringArray } from "../utils/strings";
 
@@ -86,7 +90,20 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
     ]
   };
 
-  saveFamily(family);
+  const adapter = await getDatabaseAdapter();
+  await adapter.transaction(async (tx) => {
+    await upsertUser(
+      {
+        id: creatorId,
+        displayName: creatorName,
+        phoneNumber: creatorPhone || undefined,
+        createdAt: now,
+        updatedAt: now
+      },
+      tx
+    );
+    await saveFamily(family, tx);
+  });
 
   return createJsonResponse({
     status: "created",
@@ -101,7 +118,7 @@ export const handleFamilyJoin = async (
   request: Request,
   familyId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",
@@ -169,11 +186,26 @@ export const handleFamilyJoin = async (
     joinedAt: now,
     phoneNumber: phoneNumber || undefined
   };
-  family.members.push(newMember);
+
+  const adapter = await getDatabaseAdapter();
+  await adapter.transaction(async (tx) => {
+    await upsertUser(
+      {
+        id: userId,
+        displayName,
+        phoneNumber: phoneNumber || undefined,
+        createdAt: now,
+        updatedAt: now
+      },
+      tx
+    );
+    await addFamilyMember(familyId, newMember, tx);
+  });
+  const updatedFamily = (await findFamily(familyId, adapter)) ?? family;
 
   return createJsonResponse({
     status: "joined",
-    family: serializeFamily(family),
+    family: serializeFamily(updatedFamily),
     member: newMember,
     addedBy: {
       userId: addedByMember.userId,
@@ -186,7 +218,7 @@ export const handleFamilyLeave = async (
   request: Request,
   familyId: string
 ): Promise<Response> => {
-  const family = findFamily(familyId);
+  const family = await findFamily(familyId);
   if (!family) {
     return createErrorResponse({
       code: "not_found",
@@ -242,11 +274,16 @@ export const handleFamilyLeave = async (
     }
   }
 
-  family.members = family.members.filter((item) => item.userId !== userId);
+  const adapter = await getDatabaseAdapter();
+  await removeFamilyMember(familyId, userId, adapter);
+  const updatedFamily = (await findFamily(familyId, adapter)) ?? {
+    ...family,
+    members: family.members.filter((item) => item.userId !== userId)
+  };
 
   return createJsonResponse({
     status: "left",
-    family: serializeFamily(family),
+    family: serializeFamily(updatedFamily),
     removedMember: member
   });
 };
