@@ -111,7 +111,7 @@ export const createSummaryWorker = (deps: SummaryWorkerDependencies) => {
     familyId: string,
     period: SummaryPeriod
   ): Promise<void> => {
-    const family = findFamilyFn(familyId);
+    const family = await findFamilyFn(familyId);
     if (!family) {
       return;
     }
@@ -122,7 +122,7 @@ export const createSummaryWorker = (deps: SummaryWorkerDependencies) => {
     periodBuilder: (value: Date) => SummaryPeriod
   ): Promise<void> => {
     const period = periodBuilder(now());
-    const families = listFamiliesFn();
+    const families = await listFamiliesFn();
     for (const family of families) {
       await runSummaryForFamily(family, period);
     }
