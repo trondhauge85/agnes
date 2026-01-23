@@ -6,6 +6,9 @@ type FamilyCreatePayload = {
   creator: {
     userId: string;
     displayName: string;
+    email?: string;
+    phoneNumber?: string;
+    age?: number;
   };
   metadata?: {
     interests?: string[];

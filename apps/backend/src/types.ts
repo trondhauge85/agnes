@@ -36,7 +36,9 @@ export type OidcCallbackPayload = {
 export type User = {
   id: string;
   displayName: string;
+  email?: string;
   phoneNumber?: string;
+  age?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -48,7 +50,9 @@ export type FamilyMember = {
   displayName: string;
   role: FamilyRole;
   joinedAt: string;
+  email?: string;
   phoneNumber?: string;
+  age?: number;
 };
 
 export type FamilyMetadata = {
@@ -115,9 +119,11 @@ export type FamilyCreatePayload = {
   name: string;
   pictureUrl: string;
   creator: {
-    userId: string;
+    userId?: string;
     displayName: string;
+    email?: string;
     phoneNumber?: string;
+    age?: number;
   };
   metadata?: {
     interests?: string[];
@@ -126,10 +132,12 @@ export type FamilyCreatePayload = {
 };
 
 export type FamilyJoinPayload = {
-  userId: string;
+  userId?: string;
   displayName: string;
   addedByUserId: string;
+  email?: string;
   phoneNumber?: string;
+  age?: number;
 };
 
 export type FamilyLeavePayload = {

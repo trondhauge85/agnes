@@ -20,17 +20,14 @@ import {
   getStoredFamilies,
   saveFamily,
 } from "../../families/services/familyStorage";
-import {
-  fetchOidcProfile,
-  getOidcProfile,
-  getPreferredDisplayName
-} from "../../auth/services/oidcProfileStorage";
+import { createProfileId, getStoredProfile } from "../../profile/services/profileStorage";
 
 type FormState = {
   familyId: string;
   addedByUserId: string;
   memberUserId: string;
   displayName: string;
+  email: string;
   phoneNumber: string;
   age: string;
   photoFile: File | null;
@@ -61,12 +58,14 @@ export const AddFamilyMemberPage = () => {
   const storedFamilyName =
     getStoredFamilies().find((family) => family.id === storedFamilyId)?.name ?? "your family";
   const routedFamilyId = (location.state as { familyId?: string } | null)?.familyId ?? "";
+  const storedProfile = getStoredProfile();
 
   const initialFormState: FormState = {
     familyId: routedFamilyId || storedFamilyId,
-    addedByUserId: "",
-    memberUserId: "",
+    addedByUserId: storedProfile?.id ?? "",
+    memberUserId: createProfileId(),
     displayName: "",
+    email: "",
     phoneNumber: "",
     age: "",
     photoFile: null,
@@ -87,30 +86,14 @@ export const AddFamilyMemberPage = () => {
   }, [form.photoFile]);
 
   useEffect(() => {
-    let isMounted = true;
-    const hydrateProfile = async () => {
-      const storedProfile = getOidcProfile();
-      const profile = storedProfile ?? (await fetchOidcProfile());
-      if (!profile || !isMounted) {
-        return;
-      }
-
-      const preferredName = getPreferredDisplayName(profile);
-      setForm((prev) => ({
-        ...prev,
-        displayName: prev.displayName || preferredName || prev.displayName,
-        memberUserId: prev.memberUserId || profile.email || prev.memberUserId,
-        addedByUserId: prev.addedByUserId || profile.email || prev.addedByUserId,
-        phoneNumber: prev.phoneNumber || profile.phoneNumber || prev.phoneNumber
-      }));
-    };
-
-    hydrateProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    if (!storedProfile) {
+      return;
+    }
+    setForm((prev) => ({
+      ...prev,
+      addedByUserId: storedProfile.id || prev.addedByUserId
+    }));
+  }, [storedProfile]);
 
   useEffect(() => {
     return () => {
@@ -135,9 +118,9 @@ export const AddFamilyMemberPage = () => {
     setError(null);
     setSuccessMessage(null);
 
-    if (!form.familyId || !form.addedByUserId || !form.memberUserId || !form.displayName) {
+    if (!form.familyId || !form.addedByUserId || !form.displayName) {
       setError({
-        message: "Family ID, member ID, display name, and added by user ID are required.",
+        message: "Family, member display name, and profile owner are required.",
         messageKey: "errors.family.join_required_fields"
       });
       return;
@@ -145,11 +128,15 @@ export const AddFamilyMemberPage = () => {
 
     try {
       setIsSubmitting(true);
+      const memberUserId = form.memberUserId || createProfileId();
       const response = await joinFamily({
         familyId: form.familyId,
-        userId: form.memberUserId,
+        userId: memberUserId,
         displayName: form.displayName,
         addedByUserId: form.addedByUserId,
+        email: form.email || undefined,
+        phoneNumber: form.phoneNumber || undefined,
+        age: form.age ? Number(form.age) : undefined
       });
 
       saveFamily(response.family);
@@ -157,8 +144,9 @@ export const AddFamilyMemberPage = () => {
       setSuccessMessage(`Added ${joinedName} to ${response.family.name}.`);
       setForm((prev) => ({
         ...prev,
-        memberUserId: "",
+        memberUserId: createProfileId(),
         displayName: "",
+        email: "",
         phoneNumber: "",
         age: "",
         photoFile: null,
@@ -186,7 +174,7 @@ export const AddFamilyMemberPage = () => {
               Add a family member
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Invite someone into {storedFamilyName} by completing their profile and the required family metadata.
+              Invite someone into {storedFamilyName} by completing their profile details.
             </Typography>
           </Stack>
 
@@ -194,6 +182,11 @@ export const AddFamilyMemberPage = () => {
 
           <form onSubmit={handleSubmit}>
             <Stack spacing={3}>
+              {!form.familyId ? (
+                <Alert severity="warning">
+                  Select or create a family before inviting new members.
+                </Alert>
+              ) : null}
               <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems="center">
                 <Avatar
                   src={photoPreview ?? undefined}
@@ -242,12 +235,13 @@ export const AddFamilyMemberPage = () => {
                     required
                   />
                   <TextField
-                    label="Member user ID"
-                    value={form.memberUserId}
-                    onChange={handleChange("memberUserId")}
-                    helperText="Required by the family join API."
+                    label="Email"
+                    value={form.email}
+                    onChange={handleChange("email")}
+                    type="email"
                     fullWidth
-                    required
+                    placeholder="Optional"
+                    helperText="Used for adult invites."
                   />
                 </Stack>
                 <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
@@ -258,7 +252,7 @@ export const AddFamilyMemberPage = () => {
                     type="tel"
                     fullWidth
                     placeholder="Optional"
-                    helperText="Stored locally for now."
+                    helperText="Optional for adult invites."
                   />
                   <TextField
                     label="Age"
@@ -268,7 +262,7 @@ export const AddFamilyMemberPage = () => {
                     inputProps={{ min: 0 }}
                     fullWidth
                     placeholder="Optional"
-                    helperText="Stored locally for now."
+                    helperText="Members under 18 can join without phone or email."
                   />
                 </Stack>
               </Stack>
@@ -277,24 +271,8 @@ export const AddFamilyMemberPage = () => {
                 <Typography variant="subtitle1" fontWeight={600}>
                   Family permissions
                 </Typography>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                  <TextField
-                    label="Family ID"
-                    value={form.familyId}
-                    onChange={handleChange("familyId")}
-                    fullWidth
-                    required
-                  />
-                  <TextField
-                    label="Added by user ID"
-                    value={form.addedByUserId}
-                    onChange={handleChange("addedByUserId")}
-                    fullWidth
-                    required
-                  />
-                </Stack>
                 <Typography variant="body2" color="text.secondary">
-                  The join API only accepts the member ID, display name, and the admin/owner who is adding them.
+                  You are adding members as {storedProfile?.username ?? "your profile"}.
                 </Typography>
               </Stack>
 
@@ -321,7 +299,11 @@ export const AddFamilyMemberPage = () => {
                 >
                   Continue to home
                 </Button>
-                <Button variant="contained" type="submit" disabled={isSubmitting}>
+                <Button
+                  variant="contained"
+                  type="submit"
+                  disabled={isSubmitting || !form.familyId || !form.addedByUserId}
+                >
                   {isSubmitting ? "Adding member..." : "Add member"}
                 </Button>
               </Stack>

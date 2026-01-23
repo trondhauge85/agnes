@@ -32,9 +32,12 @@ export type FamilyJoinResponse = {
 
 export type JoinFamilyPayload = {
   familyId: string;
-  userId: string;
+  userId?: string;
   displayName: string;
   addedByUserId: string;
+  email?: string;
+  phoneNumber?: string;
+  age?: number;
 };
 
 export const joinFamily = async ({ familyId, ...payload }: JoinFamilyPayload) => {

@@ -5,6 +5,7 @@ import styled from "styled-components";
 
 import { setSessionCookie, setTokenSession } from "../services/authStorage";
 import { hasStoredFamily } from "../../families/services/familyStorage";
+import { hasStoredProfile } from "../../profile/services/profileStorage";
 import { apiRequest } from "../../../shared/api/client";
 
 type LoginFormState = {
@@ -101,7 +102,11 @@ export const LoginForm = () => {
       setTokenSession(fakeToken, state.remember);
     }
 
-    const destination = hasStoredFamily() ? "/app/home" : "/app/create-family";
+    const destination = hasStoredProfile()
+      ? hasStoredFamily()
+        ? "/app/home"
+        : "/app/create-family"
+      : "/app/profile";
     navigate(destination, { replace: true });
   };
 

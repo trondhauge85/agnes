@@ -1,0 +1,5 @@
+ALTER TABLE users ADD COLUMN email TEXT;
+ALTER TABLE users ADD COLUMN age INTEGER;
+
+ALTER TABLE family_members ADD COLUMN email TEXT;
+ALTER TABLE family_members ADD COLUMN age INTEGER;
