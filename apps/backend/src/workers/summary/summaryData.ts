@@ -73,7 +73,7 @@ export const createFamilySummaryDataFetcher = (
       (item) => item.status === "open"
     );
 
-    const calendarId = await getSelectedCalendar(calendarProvider);
+    const calendarId = await getSelectedCalendar(calendarProvider, familyId);
     const events = calendarId
       ? listCalendarEvents(calendarId).filter((event) =>
           overlapsPeriod(event, period)

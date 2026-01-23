@@ -377,8 +377,15 @@ export type CalendarSetupPayload = {
   redirectUri?: string;
 };
 
+export type CalendarOAuthStartPayload = {
+  provider: CalendarProvider;
+  redirectUri?: string;
+  state?: string;
+};
+
 export type CalendarSelectPayload = {
   provider: CalendarProvider;
+  familyId: string;
   calendarId?: string;
   name?: string;
   timezone?: string;

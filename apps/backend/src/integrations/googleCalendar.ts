@@ -39,6 +39,20 @@ const createOAuthClient = (redirectUri?: string): google.auth.OAuth2 => {
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 };
 
+export const createGoogleAuthorizationUrl = (
+  redirectUri: string,
+  state?: string
+): string => {
+  const auth = createOAuthClient(redirectUri);
+  return auth.generateAuthUrl({
+    access_type: "offline",
+    scope: DEFAULT_SCOPES,
+    include_granted_scopes: true,
+    prompt: "consent",
+    state
+  });
+};
+
 const normalizeDateTime = (
   dateTime?: string | null,
   date?: string | null,

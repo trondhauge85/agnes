@@ -3,9 +3,11 @@ import { createBrowserRouter, redirect } from "react-router-dom";
 import { LoginPage } from "../features/auth/pages/LoginPage";
 import { OidcCallbackPage } from "../features/auth/pages/OidcCallbackPage";
 import { AddFamilyMemberPage } from "../features/family/pages/AddFamilyMemberPage";
+import { CalendarSetupPage } from "../features/family/pages/CalendarSetupPage";
 import { getSession } from "../features/auth/services/authStorage";
 import { CreateFamilyPage } from "../features/families/pages/CreateFamilyPage";
 import { CalendarPage } from "../features/calendar/pages/CalendarPage";
+import { CalendarOAuthCallbackPage } from "../features/calendar/pages/CalendarOAuthCallbackPage";
 import { HomePage } from "../features/home/pages/HomePage";
 import { ShoppingListPage } from "../features/shopping/pages/ShoppingListPage";
 import { TodoPage } from "../features/todo/pages/TodoPage";
@@ -41,6 +43,10 @@ export const router = createBrowserRouter([
   {
     path: "/auth/oidc/callback",
     element: <OidcCallbackPage />,
+  },
+  {
+    path: "/calendar/oauth/callback",
+    element: <CalendarOAuthCallbackPage />,
   },
   {
     path: "/app",
@@ -81,6 +87,11 @@ export const router = createBrowserRouter([
         path: "family/add",
         loader: requireFamily,
         element: <AddFamilyMemberPage />,
+      },
+      {
+        path: "family/calendar-setup",
+        loader: requireFamily,
+        element: <CalendarSetupPage />,
       },
       {
         path: "family/settings",

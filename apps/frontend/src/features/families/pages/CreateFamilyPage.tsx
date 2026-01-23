@@ -192,7 +192,7 @@ export const CreateFamilyPage = () => {
 
       saveFamily(response.family);
       setSuccessMessage(`Family created! You can invite everyone with code ${response.family.id}.`);
-      navigate("/app/family/add", {
+      navigate("/app/family/calendar-setup", {
         replace: true,
         state: { familyId: response.family.id, familyName: response.family.name },
       });

@@ -120,6 +120,7 @@ type FamilyMealResponse = {
 };
 
 type CalendarEventResponse = {
+  familyId?: string;
   calendarId: string;
   provider: string;
   filters: Record<string, unknown>;
@@ -186,16 +187,30 @@ export const createCalendarEvent = async (
       meetingUrl?: string;
     };
   },
-  provider = "google"
-): Promise<{ status: string; event: CalendarEvent }> =>
-  apiRequest<{ status: string; event: CalendarEvent }>(`/calendar/events?provider=${provider}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
+  options: {
+    provider?: string;
+    familyId?: string;
+  } = {}
+): Promise<{ status: string; event: CalendarEvent }> => {
+  const params = new URLSearchParams({
+    provider: options.provider ?? "google",
   });
+  if (options.familyId) {
+    params.set("familyId", options.familyId);
+  }
+  return apiRequest<{ status: string; event: CalendarEvent }>(
+    `/calendar/events?${params.toString()}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+};
 
 export const fetchCalendarEvents = async (options: {
   provider?: string;
+  familyId?: string;
   start: string;
   end: string;
   limit?: number;
@@ -206,6 +221,9 @@ export const fetchCalendarEvents = async (options: {
     start: options.start,
     end: options.end,
   });
+  if (options.familyId) {
+    params.set("familyId", options.familyId);
+  }
   if (options.limit) {
     params.set("limit", options.limit.toString());
   }
