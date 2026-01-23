@@ -43,6 +43,7 @@ import {
   handleFinancialProviders,
   handleFinancialTransactions
 } from "./handlers/financial";
+import { handleActionParse } from "./handlers/actionParsing";
 import { handleRoot, notFound } from "./handlers/root";
 import { configureLogging, createLogger } from "@agnes/shared";
 
@@ -129,6 +130,10 @@ export const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "GET" && pathname === "/finance/transactions") {
     return handleFinancialTransactions(request);
+  }
+
+  if (request.method === "POST" && pathname === "/actions/parse") {
+    return handleActionParse(request);
   }
 
   if (request.method === "POST" && pathname === "/families") {

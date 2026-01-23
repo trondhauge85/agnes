@@ -1,11 +1,14 @@
 import {
   AppBar,
+  Alert,
   Avatar,
   Box,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   Container,
+  CircularProgress,
   Divider,
   Fab,
   FormControl,
@@ -37,8 +40,15 @@ import {
 } from "../../families/services/familyStorage";
 import {
   fetchCalendarEvents,
+  parseActionableItems,
+  createCalendarEvent,
+  createFamilyMeal,
+  createFamilyTodo,
   fetchFamilyMeals,
   fetchFamilyTodos,
+  type ActionParseEvent,
+  type ActionParseMeal,
+  type ActionParseTodo,
   type CalendarEvent,
   type FamilyMeal,
   type FamilyTodo,
@@ -51,6 +61,10 @@ const trackingPatterns = [
   /\b\d{15}\b/g,
   /\b\d{20,22}\b/g,
 ];
+
+const MAX_FILES = 5;
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 15 * 1024 * 1024;
 
 const extractTrackingNumbers = (value: string) => {
   if (!value) {
@@ -90,6 +104,31 @@ const getTodayRange = () => {
   };
 };
 
+const readFileAsDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Failed to read file."));
+      }
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read file."));
+    reader.readAsDataURL(file);
+  });
+
+const formatDateTime = (value?: string) => {
+  if (!value) {
+    return "Unscheduled";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString();
+};
+
 export const HomePage = () => {
   const navigate = useNavigate();
   const todayRange = useMemo(() => getTodayRange(), []);
@@ -113,13 +152,44 @@ export const HomePage = () => {
   const [note, setNote] = useState("");
   const [droppedFiles, setDroppedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [addInputError, setAddInputError] = useState<string | null>(null);
+  const [parseError, setParseError] = useState<{ message: string; messageKey: string } | null>(
+    null
+  );
+  const [parseResults, setParseResults] = useState<{
+    todos: ActionParseTodo[];
+    meals: ActionParseMeal[];
+    events: ActionParseEvent[];
+  } | null>(null);
+  const [parseSelections, setParseSelections] = useState<Record<string, boolean>>({});
+  const [isParsing, setIsParsing] = useState(false);
+  const [isSubmittingParse, setIsSubmittingParse] = useState(false);
   const trackingNumbers = useMemo(() => extractTrackingNumbers(note), [note]);
 
   const handleFileSelection = (files: FileList | null) => {
     if (!files) {
       return;
     }
-    setDroppedFiles(Array.from(files));
+    const nextFiles = Array.from(files);
+    if (nextFiles.length > MAX_FILES) {
+      setAddInputError(`You can upload up to ${MAX_FILES} files at a time.`);
+      return;
+    }
+    const hasOversized = nextFiles.some((file) => file.size > MAX_FILE_BYTES);
+    if (hasOversized) {
+      setAddInputError("Each file must be under 5 MB.");
+      return;
+    }
+    const totalBytes = nextFiles.reduce((sum, file) => sum + file.size, 0);
+    if (totalBytes > MAX_TOTAL_BYTES) {
+      setAddInputError("Total attachments must be under 15 MB.");
+      return;
+    }
+    setAddInputError(null);
+    setDroppedFiles(nextFiles);
+    setParseResults(null);
+    setParseSelections({});
+    setParseError(null);
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
@@ -138,24 +208,30 @@ export const HomePage = () => {
     }
   }, [selectedFamily]);
 
-  useEffect(() => {
+  const refreshCalendar = async () => {
     setIsLoadingCalendar(true);
     setCalendarError(null);
-    fetchCalendarEvents({ start: todayRange.start, end: todayRange.end, limit: 12 })
-      .then((response) => setEvents(response.events))
-      .catch((error) => {
-        const descriptor = getApiErrorDescriptor(error);
-        setCalendarError({
-          message: descriptor.message,
-          messageKey: descriptor.messageKey
-        });
-        setEvents([]);
-      })
-      .finally(() => setIsLoadingCalendar(false));
-  }, [todayRange.end, todayRange.start]);
+    try {
+      const response = await fetchCalendarEvents({
+        start: todayRange.start,
+        end: todayRange.end,
+        limit: 12
+      });
+      setEvents(response.events);
+    } catch (error) {
+      const descriptor = getApiErrorDescriptor(error);
+      setCalendarError({
+        message: descriptor.message,
+        messageKey: descriptor.messageKey
+      });
+      setEvents([]);
+    } finally {
+      setIsLoadingCalendar(false);
+    }
+  };
 
-  useEffect(() => {
-    if (!selectedFamily) {
+  const refreshFamily = async (familyId: string | null) => {
+    if (!familyId) {
       setTodos([]);
       setMeals([]);
       return;
@@ -163,21 +239,32 @@ export const HomePage = () => {
 
     setIsLoadingFamily(true);
     setFamilyError(null);
-    Promise.all([fetchFamilyTodos(selectedFamily), fetchFamilyMeals(selectedFamily)])
-      .then(([todoResponse, mealResponse]) => {
-        setTodos(todoResponse.todos);
-        setMeals(mealResponse.meals);
-      })
-      .catch((error) => {
-        const descriptor = getApiErrorDescriptor(error);
-        setFamilyError({
-          message: descriptor.message,
-          messageKey: descriptor.messageKey
-        });
-        setTodos([]);
-        setMeals([]);
-      })
-      .finally(() => setIsLoadingFamily(false));
+    try {
+      const [todoResponse, mealResponse] = await Promise.all([
+        fetchFamilyTodos(familyId),
+        fetchFamilyMeals(familyId)
+      ]);
+      setTodos(todoResponse.todos);
+      setMeals(mealResponse.meals);
+    } catch (error) {
+      const descriptor = getApiErrorDescriptor(error);
+      setFamilyError({
+        message: descriptor.message,
+        messageKey: descriptor.messageKey
+      });
+      setTodos([]);
+      setMeals([]);
+    } finally {
+      setIsLoadingFamily(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshCalendar();
+  }, [todayRange.end, todayRange.start]);
+
+  useEffect(() => {
+    refreshFamily(selectedFamily);
   }, [selectedFamily]);
 
   const todayMeals = useMemo(
@@ -202,6 +289,10 @@ export const HomePage = () => {
     `${todayMeals.length} meals planned`,
   ];
 
+  const selectedParseCount = Object.values(parseSelections).filter(Boolean).length;
+  const formatConfidence = (confidence: number) => `${Math.round(confidence * 100)}%`;
+  const canAnalyze = Boolean(note.trim()) || droppedFiles.length > 0;
+
   const handleFamilyChange = (value: string) => {
     setSelectedFamily(value);
     setSelectedFamilyId(value);
@@ -211,6 +302,160 @@ export const HomePage = () => {
     clearSession();
     setAnchorEl(null);
     navigate("/login", { replace: true });
+  };
+
+  const resetAddState = () => {
+    setIsAddOpen(false);
+    setNote("");
+    setDroppedFiles([]);
+    setIsDragging(false);
+    setAddInputError(null);
+    setParseError(null);
+    setParseResults(null);
+    setParseSelections({});
+    setIsParsing(false);
+    setIsSubmittingParse(false);
+  };
+
+  const openAddModal = () => {
+    setIsAddOpen(true);
+    setNote("");
+    setDroppedFiles([]);
+    setIsDragging(false);
+    setAddInputError(null);
+    setParseError(null);
+    setParseResults(null);
+    setParseSelections({});
+    setIsParsing(false);
+    setIsSubmittingParse(false);
+  };
+
+  const handleParse = async () => {
+    if (!note.trim() && droppedFiles.length === 0) {
+      setAddInputError("Add some text or files to analyze.");
+      return;
+    }
+
+    setIsParsing(true);
+    setParseError(null);
+    setAddInputError(null);
+
+    try {
+      const files = await Promise.all(
+        droppedFiles.map(async (file) => ({
+          name: file.name,
+          mimeType: file.type || "application/octet-stream",
+          dataUrl: await readFileAsDataUrl(file)
+        }))
+      );
+
+      const response = await parseActionableItems({
+        text: note.trim() || undefined,
+        files: files.length > 0 ? files : undefined,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        locale: navigator.language
+      });
+
+      setParseResults(response.results);
+      const selections: Record<string, boolean> = {};
+      response.results.todos.forEach((item) => {
+        selections[item.id] = true;
+      });
+      response.results.meals.forEach((item) => {
+        selections[item.id] = true;
+      });
+      response.results.events.forEach((item) => {
+        selections[item.id] = true;
+      });
+      setParseSelections(selections);
+    } catch (error) {
+      const descriptor = getApiErrorDescriptor(error);
+      setParseError({ message: descriptor.message, messageKey: descriptor.messageKey });
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const handleSubmitParsedItems = async () => {
+    if (!parseResults) {
+      return;
+    }
+
+    const selectedTodos = parseResults.todos.filter((item) => parseSelections[item.id]);
+    const selectedMeals = parseResults.meals.filter((item) => parseSelections[item.id]);
+    const selectedEvents = parseResults.events.filter((item) => parseSelections[item.id]);
+
+    if (selectedTodos.length === 0 && selectedMeals.length === 0 && selectedEvents.length === 0) {
+      setParseError({ message: "Select at least one item to add.", messageKey: "errors.parse.none" });
+      return;
+    }
+
+    if (!selectedFamily && (selectedTodos.length > 0 || selectedMeals.length > 0)) {
+      setParseError({
+        message: "Select a family before adding todos or meals.",
+        messageKey: "errors.parse.family_required"
+      });
+      return;
+    }
+
+    setIsSubmittingParse(true);
+    setParseError(null);
+
+    try {
+      const tasks: Promise<unknown>[] = [];
+
+      if (selectedFamily) {
+        selectedTodos.forEach((todo) => {
+          tasks.push(
+            createFamilyTodo(selectedFamily, {
+              title: todo.title,
+              notes: todo.notes
+            })
+          );
+        });
+        selectedMeals.forEach((meal) => {
+          tasks.push(
+            createFamilyMeal(selectedFamily, {
+              title: meal.title,
+              notes: meal.notes,
+              mealType: meal.mealType,
+              scheduledFor: meal.scheduledFor,
+              servings: meal.servings,
+              recipeUrl: meal.recipeUrl
+            })
+          );
+        });
+      }
+
+      selectedEvents.forEach((event) => {
+        if (event.start?.dateTime && event.end?.dateTime) {
+          tasks.push(
+            createCalendarEvent({
+              title: event.title,
+              description: event.description,
+              start: event.start,
+              end: event.end,
+              location: event.location
+            })
+          );
+        }
+      });
+
+      const results = await Promise.allSettled(tasks);
+      const failures = results.filter((result) => result.status === "rejected");
+
+      if (failures.length > 0) {
+        throw failures[0].reason;
+      }
+
+      await Promise.all([refreshFamily(selectedFamily), refreshCalendar()]);
+      resetAddState();
+    } catch (error) {
+      const descriptor = getApiErrorDescriptor(error);
+      setParseError({ message: descriptor.message, messageKey: descriptor.messageKey });
+    } finally {
+      setIsSubmittingParse(false);
+    }
   };
 
   return (
@@ -480,7 +725,7 @@ export const HomePage = () => {
       <Fab
         color="primary"
         aria-label="Add"
-        onClick={() => setIsAddOpen(true)}
+        onClick={openAddModal}
         sx={{
           position: "fixed",
           right: { xs: 16, md: 32 },
@@ -512,7 +757,7 @@ export const HomePage = () => {
           px: { xs: 2, md: 4 },
           py: { xs: 3, md: 5 },
         }}
-        onClick={() => setIsAddOpen(false)}
+        onClick={resetAddState}
       >
         <Paper
           elevation={4}
@@ -542,7 +787,13 @@ export const HomePage = () => {
               multiline
               minRows={3}
               value={note}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(event) => {
+                setNote(event.target.value);
+                setParseResults(null);
+                setParseSelections({});
+                setParseError(null);
+                setAddInputError(null);
+              }}
               placeholder="What do you want to remember or share?"
               sx={{
                 bgcolor: "#f8fafc",
@@ -711,11 +962,174 @@ export const HomePage = () => {
               </Stack>
             </Stack>
 
+            {addInputError ? (
+              <Alert severity="warning">{addInputError}</Alert>
+            ) : null}
+            {parseError ? <Alert severity="error">{parseError.message}</Alert> : null}
+
+            <Stack
+              spacing={2}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid #e2e8f0",
+                p: 3,
+                bgcolor: "#ffffff",
+              }}
+            >
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Suggested actions
+                </Typography>
+                {isParsing ? <CircularProgress size={20} /> : null}
+              </Stack>
+
+              {!parseResults && !isParsing ? (
+                <Typography variant="body2" color="text.secondary">
+                  Run analysis to turn your note or attachments into actionable todos, meals, and
+                  calendar events.
+                </Typography>
+              ) : null}
+
+              {parseResults ? (
+                <Stack spacing={2}>
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Todos
+                    </Typography>
+                    {parseResults.todos.length > 0 ? (
+                      <List disablePadding>
+                        {parseResults.todos.map((todo) => (
+                          <ListItem
+                            key={todo.id}
+                            disableGutters
+                            alignItems="flex-start"
+                            secondaryAction={
+                              <Chip label={formatConfidence(todo.confidence)} size="small" />
+                            }
+                          >
+                            <Checkbox
+                              checked={Boolean(parseSelections[todo.id])}
+                              onChange={() =>
+                                setParseSelections((prev) => ({
+                                  ...prev,
+                                  [todo.id]: !prev[todo.id]
+                                }))
+                              }
+                            />
+                            <ListItemText
+                              primary={todo.title}
+                              secondary={[todo.notes, todo.source].filter(Boolean).join(" • ")}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No todos detected yet.
+                      </Typography>
+                    )}
+                  </Stack>
+
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Meals
+                    </Typography>
+                    {parseResults.meals.length > 0 ? (
+                      <List disablePadding>
+                        {parseResults.meals.map((meal) => (
+                          <ListItem
+                            key={meal.id}
+                            disableGutters
+                            alignItems="flex-start"
+                            secondaryAction={
+                              <Chip label={formatConfidence(meal.confidence)} size="small" />
+                            }
+                          >
+                            <Checkbox
+                              checked={Boolean(parseSelections[meal.id])}
+                              onChange={() =>
+                                setParseSelections((prev) => ({
+                                  ...prev,
+                                  [meal.id]: !prev[meal.id]
+                                }))
+                              }
+                            />
+                            <ListItemText
+                              primary={meal.title}
+                              secondary={[
+                                meal.mealType,
+                                meal.scheduledFor ? formatDateTime(meal.scheduledFor) : null,
+                                meal.notes,
+                                meal.source
+                              ]
+                                .filter(Boolean)
+                                .join(" • ")}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No meals detected yet.
+                      </Typography>
+                    )}
+                  </Stack>
+
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Calendar events
+                    </Typography>
+                    {parseResults.events.length > 0 ? (
+                      <List disablePadding>
+                        {parseResults.events.map((event) => (
+                          <ListItem
+                            key={event.id}
+                            disableGutters
+                            alignItems="flex-start"
+                            secondaryAction={
+                              <Chip label={formatConfidence(event.confidence)} size="small" />
+                            }
+                          >
+                            <Checkbox
+                              checked={Boolean(parseSelections[event.id])}
+                              onChange={() =>
+                                setParseSelections((prev) => ({
+                                  ...prev,
+                                  [event.id]: !prev[event.id]
+                                }))
+                              }
+                            />
+                            <ListItemText
+                              primary={event.title}
+                              secondary={[
+                                event.start?.dateTime ? formatDateTime(event.start.dateTime) : null,
+                                event.end?.dateTime ? `to ${formatDateTime(event.end.dateTime)}` : null,
+                                event.description,
+                                event.location?.name,
+                                event.location?.address,
+                                event.source
+                              ]
+                                .filter(Boolean)
+                                .join(" • ")}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No calendar events detected yet.
+                      </Typography>
+                    )}
+                  </Stack>
+                </Stack>
+              ) : null}
+            </Stack>
+
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="flex-end">
               <Box
                 component="button"
                 type="button"
-                onClick={() => setIsAddOpen(false)}
+                onClick={resetAddState}
                 style={{
                   borderRadius: 999,
                   border: "1px solid #e2e8f0",
@@ -730,19 +1144,44 @@ export const HomePage = () => {
               <Box
                 component="button"
                 type="button"
-                onClick={() => setIsAddOpen(false)}
+                onClick={handleParse}
+                disabled={isParsing || !canAnalyze}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid #e2e8f0",
+                  padding: "10px 24px",
+                  background: "transparent",
+                  fontWeight: 600,
+                  cursor: isParsing || !canAnalyze ? "not-allowed" : "pointer",
+                  opacity: isParsing || !canAnalyze ? 0.7 : 1,
+                }}
+              >
+                {parseResults ? "Re-run analysis" : "Analyze"}
+              </Box>
+              <Box
+                component="button"
+                type="button"
+                onClick={handleSubmitParsedItems}
+                disabled={isSubmittingParse || selectedParseCount === 0}
                 style={{
                   borderRadius: 999,
                   border: "none",
                   padding: "10px 24px",
-                  background: "linear-gradient(135deg, #2563eb, #4f46e5)",
+                  background:
+                    isSubmittingParse || selectedParseCount === 0
+                      ? "#cbd5f5"
+                      : "linear-gradient(135deg, #2563eb, #4f46e5)",
                   color: "#ffffff",
                   fontWeight: 600,
-                  cursor: "pointer",
-                  boxShadow: "0 16px 30px rgba(37, 99, 235, 0.35)",
+                  cursor:
+                    isSubmittingParse || selectedParseCount === 0 ? "not-allowed" : "pointer",
+                  boxShadow:
+                    isSubmittingParse || selectedParseCount === 0
+                      ? "none"
+                      : "0 16px 30px rgba(37, 99, 235, 0.35)",
                 }}
               >
-                Add
+                {isSubmittingParse ? "Adding..." : `Add ${selectedParseCount || ""}`.trim()}
               </Box>
             </Stack>
           </Stack>
