@@ -10,6 +10,7 @@ import type {
 import { createEmailAuthRequest, verifyEmailAuthRequest } from "../db/emailAuth";
 import { getDatabaseAdapter } from "../db/client";
 import { getOidcProfile, saveOidcProfile } from "../data/oidcProfiles";
+import { createDefaultMessageService } from "../communications";
 import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
 import { isEmail } from "../utils/strings";
 
@@ -172,6 +173,15 @@ export const handleEmailStart = async (request: Request): Promise<Response> => {
   const email = body.email.toLowerCase();
   const adapter = await getDatabaseAdapter();
   const record = await createEmailAuthRequest(adapter, email, body.action);
+  const messageService = createDefaultMessageService();
+  if (messageService) {
+    await messageService.sendCommunication({
+      channel: "email",
+      idempotencyKey: `email-auth-${record.id}`,
+      message: `Your Agnes ${body.action} code is ${record.code}.`,
+      recipients: [{ address: email }]
+    });
+  }
 
   return createJsonResponse({
     status: "pending",

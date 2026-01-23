@@ -1,6 +1,7 @@
 import type { Family } from "../../types";
 import { listFamilies, findFamily } from "../../data/families";
 import type { LlmService } from "../../llm";
+import { createDefaultMessageService } from "../../communications";
 import { createMessageService } from "../../communications/messageService";
 import { createFamilySummaryDataFetcher } from "./summaryData";
 import {
@@ -13,7 +14,7 @@ type MessageService = ReturnType<typeof createMessageService>;
 
 type SummaryWorkerDependencies = {
   llmService: LlmService;
-  messageService: MessageService;
+  messageService?: MessageService;
   listFamilies?: typeof listFamilies;
   findFamily?: typeof findFamily;
   fetchSummaryData?: ReturnType<typeof createFamilySummaryDataFetcher>;
@@ -78,7 +79,7 @@ const getSmsRecipients = (family: Family): string[] =>
 export const createSummaryWorker = (deps: SummaryWorkerDependencies) => {
   const {
     llmService,
-    messageService,
+    messageService = createDefaultMessageService() ?? createMessageService({ providers: {} }),
     listFamilies: listFamiliesFn = listFamilies,
     findFamily: findFamilyFn = findFamily,
     fetchSummaryData = createFamilySummaryDataFetcher(),
