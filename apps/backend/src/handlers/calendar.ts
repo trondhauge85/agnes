@@ -227,7 +227,7 @@ const applyFilters = (
   return filtered;
 };
 
-export const handleCalendarProviders = async (): Promise<Response> =>
+export const handleCalendarProviders = (): Response =>
   createJsonResponse({
     providers: supportedProviders
   });
