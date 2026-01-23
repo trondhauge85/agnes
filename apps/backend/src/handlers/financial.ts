@@ -33,7 +33,7 @@ const ensureUserId = (value?: string | null): string | null => {
   return normalized || null;
 };
 
-export const handleFinancialProviders = async (): Promise<Response> =>
+export const handleFinancialProviders = (): Response =>
   createJsonResponse({ providers: listFinancialProviders() });
 
 export const handleFinancialImport = async (
