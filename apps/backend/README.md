@@ -148,6 +148,17 @@ Provide the following environment variables to enable the WhatsApp integration:
 - `WHATSAPP_API_BASE_URL` (optional): Graph API base URL (default
   `https://graph.facebook.com`).
 
+## Brevo SMS + Email configuration
+
+The backend can send transactional SMS and email through Brevo (EU-based).
+Provide the following environment variables to enable the integration:
+
+- `BREVO_API_KEY`: Brevo API key with SMS/email permissions.
+- `BREVO_SMS_SENDER`: SMS sender ID or phone number (required for SMS).
+- `BREVO_EMAIL_SENDER`: verified sender email (required for email).
+- `BREVO_EMAIL_SENDER_NAME` (optional): friendly sender name.
+- `BREVO_EMAIL_SUBJECT` (optional): subject line for auth emails.
+
 ## Bruno collection
 
 The Bruno collection lives in `apps/backend/bruno` and mirrors the handler
