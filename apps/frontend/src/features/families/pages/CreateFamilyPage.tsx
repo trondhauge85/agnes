@@ -12,6 +12,11 @@ import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
 import { getApiErrorDescriptor } from "../../../shared/api";
+import {
+  fetchOidcProfile,
+  getOidcProfile,
+  getPreferredDisplayName
+} from "../../auth/services/oidcProfileStorage";
 import { createFamily } from "../services/familyApi";
 import { saveFamily } from "../services/familyStorage";
 
@@ -120,6 +125,27 @@ export const CreateFamilyPage = () => {
   const navigate = useNavigate();
 
   const previewUrl = useMemo(() => photoUrl ?? placeholderSvg, [photoUrl]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const hydrateProfile = async () => {
+      const storedProfile = getOidcProfile();
+      const profile = storedProfile ?? (await fetchOidcProfile());
+      if (!profile || !isMounted) {
+        return;
+      }
+      const preferredName = getPreferredDisplayName(profile);
+      if (preferredName) {
+        setDisplayName((prev) => prev || preferredName);
+      }
+    };
+
+    hydrateProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {

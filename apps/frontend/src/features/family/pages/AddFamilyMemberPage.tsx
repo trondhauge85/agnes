@@ -20,6 +20,11 @@ import {
   getStoredFamilies,
   saveFamily,
 } from "../../families/services/familyStorage";
+import {
+  fetchOidcProfile,
+  getOidcProfile,
+  getPreferredDisplayName
+} from "../../auth/services/oidcProfileStorage";
 
 type FormState = {
   familyId: string;
@@ -80,6 +85,32 @@ export const AddFamilyMemberPage = () => {
     }
     return URL.createObjectURL(form.photoFile);
   }, [form.photoFile]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const hydrateProfile = async () => {
+      const storedProfile = getOidcProfile();
+      const profile = storedProfile ?? (await fetchOidcProfile());
+      if (!profile || !isMounted) {
+        return;
+      }
+
+      const preferredName = getPreferredDisplayName(profile);
+      setForm((prev) => ({
+        ...prev,
+        displayName: prev.displayName || preferredName || prev.displayName,
+        memberUserId: prev.memberUserId || profile.email || prev.memberUserId,
+        addedByUserId: prev.addedByUserId || profile.email || prev.addedByUserId,
+        phoneNumber: prev.phoneNumber || profile.phoneNumber || prev.phoneNumber
+      }));
+    };
+
+    hydrateProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {

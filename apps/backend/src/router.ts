@@ -2,6 +2,8 @@ import {
   handleEmailStart,
   handleEmailVerify,
   handleOAuthStart,
+  handleOidcCallback,
+  handleOidcProfile,
   handleProviders
 } from "./handlers/auth";
 import {
@@ -78,6 +80,14 @@ export const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "POST" && pathname === "/auth/email/verify") {
     return handleEmailVerify(request);
+  }
+
+  if (request.method === "POST" && pathname === "/auth/oidc/callback") {
+    return handleOidcCallback(request);
+  }
+
+  if (request.method === "GET" && pathname === "/auth/oidc/profile") {
+    return handleOidcProfile(request);
   }
 
   if (request.method === "GET" && pathname === "/calendar/providers") {

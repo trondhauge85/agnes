@@ -19,6 +19,20 @@ export type EmailVerifyPayload = {
   code: string;
 };
 
+export type OidcProfile = {
+  displayName?: string;
+  givenName?: string;
+  familyName?: string;
+  email?: string;
+  phoneNumber?: string;
+  pictureUrl?: string;
+};
+
+export type OidcCallbackPayload = {
+  provider: OAuthProvider;
+  profile?: OidcProfile;
+};
+
 export type User = {
   id: string;
   displayName: string;
