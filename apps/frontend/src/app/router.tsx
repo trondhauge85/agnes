@@ -1,6 +1,7 @@
 import { createBrowserRouter, redirect } from "react-router-dom";
 
 import { LoginPage } from "../features/auth/pages/LoginPage";
+import { OidcCallbackPage } from "../features/auth/pages/OidcCallbackPage";
 import { AddFamilyMemberPage } from "../features/family/pages/AddFamilyMemberPage";
 import { getSession } from "../features/auth/services/authStorage";
 import { CreateFamilyPage } from "../features/families/pages/CreateFamilyPage";
@@ -36,6 +37,10 @@ export const router = createBrowserRouter([
       return null;
     },
     element: <LoginPage />,
+  },
+  {
+    path: "/auth/oidc/callback",
+    element: <OidcCallbackPage />,
   },
   {
     path: "/app",

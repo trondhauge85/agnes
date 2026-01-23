@@ -109,7 +109,9 @@ export const LoginForm = () => {
     setOidcError(null);
     setOidcLoading(providerId);
     try {
-      const redirectUri = `${window.location.origin}/auth/oidc/callback`;
+      const redirectUrl = new URL("/auth/oidc/callback", window.location.origin);
+      redirectUrl.searchParams.set("provider", providerId);
+      const redirectUri = redirectUrl.toString();
       const response = await apiRequest<OAuthStartResponse>("/auth/oauth/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
