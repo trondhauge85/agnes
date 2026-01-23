@@ -53,6 +53,62 @@ export type CalendarEvent = {
   tags: string[];
 };
 
+export type ActionParseFile = {
+  name: string;
+  mimeType: string;
+  dataUrl: string;
+};
+
+export type ActionParseTodo = {
+  id: string;
+  title: string;
+  notes?: string;
+  confidence: number;
+  source?: string;
+};
+
+export type ActionParseMeal = {
+  id: string;
+  title: string;
+  notes?: string;
+  mealType?: string;
+  scheduledFor?: string;
+  servings?: number;
+  recipeUrl?: string;
+  confidence: number;
+  source?: string;
+};
+
+export type ActionParseEvent = {
+  id: string;
+  title: string;
+  description?: string;
+  start?: {
+    dateTime: string;
+    timeZone?: string;
+  };
+  end?: {
+    dateTime: string;
+    timeZone?: string;
+  };
+  location?: {
+    name?: string;
+    address?: string;
+    meetingUrl?: string;
+  };
+  confidence: number;
+  source?: string;
+};
+
+export type ActionParseResponse = {
+  status: "parsed";
+  results: {
+    todos: ActionParseTodo[];
+    meals: ActionParseMeal[];
+    events: ActionParseEvent[];
+  };
+};
+
 type FamilyTodoResponse = {
   familyId: string;
   todos: FamilyTodo[];
@@ -75,6 +131,68 @@ export const fetchFamilyTodos = async (familyId: string): Promise<FamilyTodoResp
 
 export const fetchFamilyMeals = async (familyId: string): Promise<FamilyMealResponse> =>
   apiRequest<FamilyMealResponse>(`/families/${familyId}/meals`);
+
+export const parseActionableItems = async (payload: {
+  text?: string;
+  files?: ActionParseFile[];
+  timezone?: string;
+  locale?: string;
+}): Promise<ActionParseResponse> =>
+  apiRequest<ActionParseResponse>("/actions/parse", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+export const createFamilyTodo = async (
+  familyId: string,
+  payload: {
+    title: string;
+    notes?: string;
+  }
+): Promise<{ status: string; todo: FamilyTodo }> =>
+  apiRequest<{ status: string; todo: FamilyTodo }>(`/families/${familyId}/todos`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+export const createFamilyMeal = async (
+  familyId: string,
+  payload: {
+    title: string;
+    notes?: string;
+    mealType?: string;
+    scheduledFor?: string;
+    servings?: number;
+    recipeUrl?: string;
+  }
+): Promise<{ status: string; meal: FamilyMeal }> =>
+  apiRequest<{ status: string; meal: FamilyMeal }>(`/families/${familyId}/meals`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+export const createCalendarEvent = async (
+  payload: {
+    title: string;
+    description?: string;
+    start: { dateTime: string; timeZone?: string };
+    end: { dateTime: string; timeZone?: string };
+    location?: {
+      name?: string;
+      address?: string;
+      meetingUrl?: string;
+    };
+  },
+  provider = "google"
+): Promise<{ status: string; event: CalendarEvent }> =>
+  apiRequest<{ status: string; event: CalendarEvent }>(`/calendar/events?provider=${provider}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 
 export const fetchCalendarEvents = async (options: {
   provider?: string;

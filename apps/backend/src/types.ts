@@ -172,6 +172,69 @@ export type FamilyMealUpdatePayload = {
   assignedToUserId?: string | null;
 };
 
+export type ActionParseFilePayload = {
+  name: string;
+  mimeType: string;
+  dataUrl: string;
+};
+
+export type ActionParseRequestPayload = {
+  text?: string;
+  files?: ActionParseFilePayload[];
+  timezone?: string;
+  locale?: string;
+};
+
+export type ActionParseTodoResult = {
+  id: string;
+  title: string;
+  notes?: string;
+  confidence: number;
+  source?: string;
+};
+
+export type ActionParseMealResult = {
+  id: string;
+  title: string;
+  notes?: string;
+  mealType?: string;
+  scheduledFor?: string;
+  servings?: number;
+  recipeUrl?: string;
+  confidence: number;
+  source?: string;
+};
+
+export type ActionParseEventResult = {
+  id: string;
+  title: string;
+  description?: string;
+  start?: {
+    dateTime: string;
+    timeZone?: string;
+  };
+  end?: {
+    dateTime: string;
+    timeZone?: string;
+  };
+  location?: {
+    name?: string;
+    address?: string;
+    meetingUrl?: string;
+  };
+  confidence: number;
+  source?: string;
+};
+
+export type ActionParseResponsePayload = {
+  status: "parsed";
+  results: {
+    todos: ActionParseTodoResult[];
+    meals: ActionParseMealResult[];
+    events: ActionParseEventResult[];
+  };
+};
+
 export type FamilyProjectStatus =
   | "planned"
   | "active"
