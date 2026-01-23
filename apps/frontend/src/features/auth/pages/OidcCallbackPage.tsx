@@ -6,6 +6,7 @@ import styled from "styled-components";
 import { apiRequest } from "../../../shared/api/client";
 import { getApiErrorDescriptor } from "../../../shared/api";
 import { hasStoredFamily } from "../../families/services/familyStorage";
+import { hasStoredProfile } from "../../profile/services/profileStorage";
 import { setTokenSession } from "../services/authStorage";
 import {
   clearOidcProfile,
@@ -83,7 +84,11 @@ export const OidcCallbackPage = () => {
         saveOidcProfile(response.profile);
         setTokenSession(response.sessionToken, true);
 
-        const destination = hasStoredFamily() ? "/app/home" : "/app/create-family";
+        const destination = hasStoredProfile()
+          ? hasStoredFamily()
+            ? "/app/home"
+            : "/app/create-family"
+          : "/app/profile";
         navigate(destination, { replace: true });
       } catch (error) {
         if (!isMounted) {

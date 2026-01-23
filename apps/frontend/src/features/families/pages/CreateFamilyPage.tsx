@@ -12,11 +12,7 @@ import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
 import { getApiErrorDescriptor } from "../../../shared/api";
-import {
-  fetchOidcProfile,
-  getOidcProfile,
-  getPreferredDisplayName
-} from "../../auth/services/oidcProfileStorage";
+import { getStoredProfile } from "../../profile/services/profileStorage";
 import { createFamily } from "../services/familyApi";
 import { saveFamily } from "../services/familyStorage";
 
@@ -113,7 +109,6 @@ const placeholderSvg =
 
 export const CreateFamilyPage = () => {
   const [familyName, setFamilyName] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [selectedDescriptors, setSelectedDescriptors] = useState<string[]>([]);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,28 +118,18 @@ export const CreateFamilyPage = () => {
   } | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [profileName, setProfileName] = useState("");
+  const [profileId, setProfileId] = useState("");
 
   const previewUrl = useMemo(() => photoUrl ?? placeholderSvg, [photoUrl]);
 
   useEffect(() => {
-    let isMounted = true;
-    const hydrateProfile = async () => {
-      const storedProfile = getOidcProfile();
-      const profile = storedProfile ?? (await fetchOidcProfile());
-      if (!profile || !isMounted) {
-        return;
-      }
-      const preferredName = getPreferredDisplayName(profile);
-      if (preferredName) {
-        setDisplayName((prev) => prev || preferredName);
-      }
-    };
-
-    hydrateProfile();
-
-    return () => {
-      isMounted = false;
-    };
+    const storedProfile = getStoredProfile();
+    if (!storedProfile) {
+      return;
+    }
+    setProfileName(storedProfile.username);
+    setProfileId(storedProfile.id);
   }, []);
 
   useEffect(() => {
@@ -175,6 +160,13 @@ export const CreateFamilyPage = () => {
     event.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
+    if (!profileId || !profileName) {
+      setErrorMessage({
+        message: "Complete your profile before creating a family.",
+        messageKey: "errors.profile.required"
+      });
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -182,8 +174,8 @@ export const CreateFamilyPage = () => {
         name: familyName,
         pictureUrl: photoUrl ?? placeholderSvg,
         creator: {
-          userId: `demo-user-${Date.now()}`,
-          displayName,
+          userId: profileId,
+          displayName: profileName
         },
         metadata: {
           interests: selectedDescriptors,
@@ -265,16 +257,8 @@ export const CreateFamilyPage = () => {
                 required
                 fullWidth
               />
-              <TextField
-                label="Your name"
-                placeholder="Avery"
-                value={displayName}
-                onChange={(event) => setDisplayName(event.target.value)}
-                required
-                fullWidth
-              />
               <Typography variant="body2" color="text.secondary">
-                This shows up as the owner until everyone joins in.
+                You are creating this family as <strong>{profileName || "your profile"}</strong>.
               </Typography>
             </Stack>
 
@@ -309,7 +293,7 @@ export const CreateFamilyPage = () => {
               type="submit"
               variant="contained"
               size="large"
-              disabled={isSubmitting || !familyName || !displayName}
+              disabled={isSubmitting || !familyName || !profileName || !profileId}
             >
               {isSubmitting ? "Creating..." : "Create family"}
             </Button>

@@ -17,13 +17,18 @@ type FamilyMemberRow = {
   display_name: string;
   role: FamilyRole;
   joined_at: string;
+  email: string | null;
   phone_number: string | null;
+  age: number | null;
 };
 
 const escapeLiteral = (value: string): string => `'${value.replace(/'/g, "''")}'`;
 
 const toSqlValue = (value: string | null | undefined): string =>
   value ? escapeLiteral(value) : "NULL";
+
+const toSqlNumber = (value: number | null | undefined): string =>
+  Number.isFinite(value) ? String(value) : "NULL";
 
 const parseJsonArray = (value: string): string[] => {
   try {
@@ -75,7 +80,7 @@ export const findFamily = async (
   }
 
   const memberRows = await db.query<FamilyMemberRow>(
-    `SELECT family_id, user_id, display_name, role, joined_at, phone_number
+    `SELECT family_id, user_id, display_name, role, joined_at, email, phone_number, age
      FROM family_members
      WHERE family_id = ${escapeLiteral(familyId)}
      ORDER BY joined_at ASC`
@@ -85,7 +90,9 @@ export const findFamily = async (
     displayName: row.display_name,
     role: row.role,
     joinedAt: row.joined_at,
-    phoneNumber: row.phone_number ?? undefined
+    email: row.email ?? undefined,
+    phoneNumber: row.phone_number ?? undefined,
+    age: row.age ?? undefined
   }));
 
   return serializeFamilyRow(familyRow, members);
@@ -135,7 +142,9 @@ export const saveFamily = async (
           ${escapeLiteral(member.displayName)},
           ${escapeLiteral(member.role)},
           ${escapeLiteral(member.joinedAt)},
-          ${toSqlValue(member.phoneNumber)}
+          ${toSqlValue(member.email)},
+          ${toSqlValue(member.phoneNumber)},
+          ${toSqlNumber(member.age)}
         )`
     )
     .join(", ");
@@ -147,12 +156,16 @@ export const saveFamily = async (
       display_name,
       role,
       joined_at,
-      phone_number
+      email,
+      phone_number,
+      age
     ) VALUES ${values}
     ON CONFLICT(family_id, user_id) DO UPDATE SET
       display_name = excluded.display_name,
       role = excluded.role,
+      email = excluded.email,
       phone_number = excluded.phone_number,
+      age = excluded.age,
       joined_at = excluded.joined_at`
   );
 };
@@ -170,19 +183,25 @@ export const addFamilyMember = async (
       display_name,
       role,
       joined_at,
-      phone_number
+      email,
+      phone_number,
+      age
     ) VALUES (
       ${escapeLiteral(familyId)},
       ${escapeLiteral(member.userId)},
       ${escapeLiteral(member.displayName)},
       ${escapeLiteral(member.role)},
       ${escapeLiteral(member.joinedAt)},
-      ${toSqlValue(member.phoneNumber)}
+      ${toSqlValue(member.email)},
+      ${toSqlValue(member.phoneNumber)},
+      ${toSqlNumber(member.age)}
     )
     ON CONFLICT(family_id, user_id) DO UPDATE SET
       display_name = excluded.display_name,
       role = excluded.role,
+      email = excluded.email,
       phone_number = excluded.phone_number,
+      age = excluded.age,
       joined_at = excluded.joined_at`
   );
 };
@@ -212,7 +231,7 @@ export const listFamilies = async (
   }
 
   const memberRows = await db.query<FamilyMemberRow>(
-    "SELECT family_id, user_id, display_name, role, joined_at, phone_number FROM family_members"
+    "SELECT family_id, user_id, display_name, role, joined_at, email, phone_number, age FROM family_members"
   );
   const membersByFamily = new Map<string, FamilyMember[]>();
   for (const row of memberRows) {
@@ -222,7 +241,9 @@ export const listFamilies = async (
       displayName: row.display_name,
       role: row.role,
       joinedAt: row.joined_at,
-      phoneNumber: row.phone_number ?? undefined
+      email: row.email ?? undefined,
+      phoneNumber: row.phone_number ?? undefined,
+      age: row.age ?? undefined
     });
     membersByFamily.set(row.family_id, existing);
   }

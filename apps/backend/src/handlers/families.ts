@@ -17,9 +17,27 @@ import {
   serializeFamily
 } from "../data/families";
 import { upsertUser } from "../data/users";
+import { createDefaultMessageService } from "../communications";
 import { getDatabaseAdapter } from "../db/client";
 import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
-import { normalizeString, normalizeStringArray } from "../utils/strings";
+import { isEmail, normalizeString, normalizeStringArray } from "../utils/strings";
+
+const parseAge = (value: unknown): number | undefined => {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value >= 0 ? Math.floor(value) : undefined;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isNaN(parsed)) {
+      return undefined;
+    }
+    return parsed >= 0 ? parsed : undefined;
+  }
+  return undefined;
+};
 
 export const handleFamilyCreate = async (request: Request): Promise<Response> => {
   const body = await parseJsonBody<FamilyCreatePayload>(request);
@@ -34,9 +52,11 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
 
   const name = normalizeString(body.name ?? "");
   const pictureUrl = normalizeString(body.pictureUrl ?? "");
-  const creatorId = normalizeString(body.creator?.userId ?? "");
+  const creatorIdRaw = normalizeString(body.creator?.userId ?? "");
   const creatorName = normalizeString(body.creator?.displayName ?? "");
+  const creatorEmail = normalizeString(body.creator?.email ?? "");
   const creatorPhone = normalizeString(body.creator?.phoneNumber ?? "");
+  const creatorAge = parseAge(body.creator?.age);
   const metadata: FamilyMetadata = {
     interests: normalizeStringArray(body.metadata?.interests),
     goals: normalizeStringArray(body.metadata?.goals)
@@ -62,16 +82,17 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
     });
   }
 
-  if (!creatorId || !creatorName) {
+  if (!creatorName) {
     return createErrorResponse({
       code: "bad_request",
-      message: "creator.userId and creator.displayName are required.",
+      message: "creator.displayName is required.",
       messageKey: "errors.family.creator_required",
       status: 400,
-      details: { fields: ["creator.userId", "creator.displayName"], reason: "required" }
+      details: { fields: ["creator.displayName"], reason: "required" }
     });
   }
 
+  const creatorId = creatorIdRaw || crypto.randomUUID();
   const now = new Date().toISOString();
   const family: Family = {
     id: crypto.randomUUID(),
@@ -85,7 +106,9 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
         displayName: creatorName,
         role: "owner",
         joinedAt: now,
-        phoneNumber: creatorPhone || undefined
+        email: creatorEmail || undefined,
+        phoneNumber: creatorPhone || undefined,
+        age: creatorAge
       }
     ]
   };
@@ -96,7 +119,9 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
       {
         id: creatorId,
         displayName: creatorName,
+        email: creatorEmail || undefined,
         phoneNumber: creatorPhone || undefined,
+        age: creatorAge,
         createdAt: now,
         updatedAt: now
       },
@@ -139,25 +164,28 @@ export const handleFamilyJoin = async (
     });
   }
 
-  const userId = normalizeString(body.userId ?? "");
+  const userIdRaw = normalizeString(body.userId ?? "");
   const displayName = normalizeString(body.displayName ?? "");
   const addedByUserId = normalizeString(body.addedByUserId ?? "");
+  const email = normalizeString(body.email ?? "");
   const phoneNumber = normalizeString(body.phoneNumber ?? "");
+  const age = parseAge(body.age);
 
-  if (!userId || !displayName || !addedByUserId) {
+  if (!displayName || !addedByUserId) {
     return createErrorResponse({
       code: "bad_request",
       message:
-        "userId, displayName, and addedByUserId are required to join a family.",
+        "displayName and addedByUserId are required to join a family.",
       messageKey: "errors.family.join_required_fields",
       status: 400,
       details: {
-        fields: ["userId", "displayName", "addedByUserId"],
+        fields: ["displayName", "addedByUserId"],
         reason: "required"
       }
     });
   }
 
+  const userId = userIdRaw || crypto.randomUUID();
   const addedByMember = getMemberById(family, addedByUserId);
   if (!addedByMember || !canAddMembers(addedByMember.role)) {
     return createErrorResponse({
@@ -184,7 +212,9 @@ export const handleFamilyJoin = async (
     displayName,
     role: "member",
     joinedAt: now,
-    phoneNumber: phoneNumber || undefined
+    email: email || undefined,
+    phoneNumber: phoneNumber || undefined,
+    age
   };
 
   const adapter = await getDatabaseAdapter();
@@ -193,7 +223,9 @@ export const handleFamilyJoin = async (
       {
         id: userId,
         displayName,
+        email: email || undefined,
         phoneNumber: phoneNumber || undefined,
+        age,
         createdAt: now,
         updatedAt: now
       },
@@ -202,6 +234,19 @@ export const handleFamilyJoin = async (
     await addFamilyMember(familyId, newMember, tx);
   });
   const updatedFamily = (await findFamily(familyId, adapter)) ?? family;
+
+  const messageService = createDefaultMessageService();
+  if (messageService && age !== undefined && age >= 18 && (phoneNumber || email)) {
+    const inviteEmail = email && isEmail(email) ? email : null;
+    if (inviteEmail) {
+      await messageService.sendCommunication({
+        channel: "email",
+        idempotencyKey: `family-invite-${familyId}-${userId}`,
+        message: `${addedByMember.displayName} invited you to join ${family.name} on Agnes.`,
+        recipients: [{ address: inviteEmail, name: displayName }]
+      });
+    }
+  }
 
   return createJsonResponse({
     status: "joined",

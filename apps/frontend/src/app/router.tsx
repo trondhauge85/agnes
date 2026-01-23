@@ -13,11 +13,21 @@ import { ShoppingListPage } from "../features/shopping/pages/ShoppingListPage";
 import { TodoPage } from "../features/todo/pages/TodoPage";
 import { hasStoredFamily } from "../features/families/services/familyStorage";
 import { FamilySettingsPage } from "../features/family/pages/FamilySettingsPage";
+import { ProfileSetupPage } from "../features/profile/pages/ProfileSetupPage";
+import { hasStoredProfile } from "../features/profile/services/profileStorage";
 
 import { AppLayout } from "./AppLayout";
 
-const getPostAuthRedirect = () => (hasStoredFamily() ? "/app/home" : "/app/create-family");
+const getPostAuthRedirect = () => {
+  if (!hasStoredProfile()) {
+    return "/app/profile";
+  }
+  return hasStoredFamily() ? "/app/home" : "/app/create-family";
+};
 const requireFamily = () => {
+  if (!hasStoredProfile()) {
+    return redirect("/app/profile");
+  }
   if (!hasStoredFamily()) {
     return redirect("/app/create-family");
   }
@@ -64,6 +74,16 @@ export const router = createBrowserRouter([
         loader: () => redirect(getPostAuthRedirect()),
       },
       {
+        path: "profile",
+        loader: () => {
+          if (hasStoredProfile()) {
+            return redirect(getPostAuthRedirect());
+          }
+          return null;
+        },
+        element: <ProfileSetupPage />,
+      },
+      {
         path: "home",
         loader: requireFamily,
         element: <HomePage />,
@@ -95,11 +115,15 @@ export const router = createBrowserRouter([
       },
       {
         path: "family/settings",
+        loader: requireFamily,
         element: <FamilySettingsPage />,
       },
       {
         path: "create-family",
         loader: () => {
+          if (!hasStoredProfile()) {
+            return redirect("/app/profile");
+          }
           if (hasStoredFamily()) {
             return redirect("/app/home");
           }
