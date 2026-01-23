@@ -56,6 +56,52 @@ export const handler = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
   const { pathname } = url;
 
+  const withCors = (response: Response): Response => {
+    const headers = new Headers(response.headers);
+    const origin = request.headers.get("origin");
+
+    if (origin) {
+      headers.set("access-control-allow-origin", origin);
+      headers.set("access-control-allow-credentials", "true");
+      const vary = headers.get("vary");
+      headers.set("vary", vary ? `${vary}, Origin` : "Origin");
+    } else {
+      headers.set("access-control-allow-origin", "*");
+    }
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+  };
+
+  if (request.method === "OPTIONS") {
+    const headers = new Headers();
+    const origin = request.headers.get("origin");
+    const requestHeaders = request.headers.get("access-control-request-headers");
+
+    if (origin) {
+      headers.set("access-control-allow-origin", origin);
+      headers.set("access-control-allow-credentials", "true");
+      headers.set("vary", "Origin");
+    } else {
+      headers.set("access-control-allow-origin", "*");
+    }
+
+    headers.set(
+      "access-control-allow-methods",
+      "GET,POST,PATCH,DELETE,OPTIONS"
+    );
+    headers.set(
+      "access-control-allow-headers",
+      requestHeaders ?? "authorization,content-type"
+    );
+    headers.set("access-control-max-age", "86400");
+
+    return new Response(null, { status: 204, headers });
+  }
+
   logger.info("request.received", {
     data: {
       method: request.method,
@@ -64,129 +110,139 @@ export const handler = async (request: Request): Promise<Response> => {
   });
 
   if (request.method === "GET" && pathname === "/") {
-    return handleRoot(pathname);
+    return withCors(handleRoot(pathname));
   }
 
   if (request.method === "GET" && pathname === "/auth/providers") {
-    return handleProviders();
+    return withCors(handleProviders());
   }
 
   if (request.method === "POST" && pathname === "/auth/oauth/start") {
-    return handleOAuthStart(request);
+    return withCors(await handleOAuthStart(request));
   }
 
   if (request.method === "POST" && pathname === "/auth/email/start") {
-    return handleEmailStart(request);
+    return withCors(await handleEmailStart(request));
   }
 
   if (request.method === "POST" && pathname === "/auth/email/verify") {
-    return handleEmailVerify(request);
+    return withCors(await handleEmailVerify(request));
   }
 
   if (request.method === "POST" && pathname === "/auth/oidc/callback") {
-    return handleOidcCallback(request);
+    return withCors(await handleOidcCallback(request));
   }
 
   if (request.method === "GET" && pathname === "/auth/oidc/profile") {
-    return handleOidcProfile(request);
+    return withCors(await handleOidcProfile(request));
   }
 
   if (request.method === "GET" && pathname === "/calendar/providers") {
-    return handleCalendarProviders();
+    return withCors(handleCalendarProviders());
   }
 
   if (request.method === "POST" && pathname === "/calendar/setup") {
-    return handleCalendarSetup(request);
+    return withCors(await handleCalendarSetup(request));
   }
 
   if (request.method === "GET" && pathname === "/calendar") {
-    return handleCalendarList(request);
+    return withCors(await handleCalendarList(request));
   }
 
   if (request.method === "POST" && pathname === "/calendar/select") {
-    return handleCalendarSelect(request);
+    return withCors(await handleCalendarSelect(request));
   }
 
   if (request.method === "GET" && pathname === "/calendar/events") {
-    return handleCalendarEventList(request);
+    return withCors(await handleCalendarEventList(request));
   }
 
   if (request.method === "POST" && pathname === "/calendar/events") {
-    return handleCalendarEventCreate(request);
+    return withCors(await handleCalendarEventCreate(request));
   }
 
   const calendarEventMatch = pathname.match(/^\/calendar\/events\/([^/]+)$/);
   if (calendarEventMatch) {
     if (request.method === "PATCH") {
-      return handleCalendarEventUpdate(request, calendarEventMatch[1]);
+      return withCors(
+        await handleCalendarEventUpdate(request, calendarEventMatch[1])
+      );
     }
 
     if (request.method === "DELETE") {
-      return handleCalendarEventDelete(request, calendarEventMatch[1]);
+      return withCors(
+        await handleCalendarEventDelete(request, calendarEventMatch[1])
+      );
     }
   }
 
   if (request.method === "GET" && pathname === "/finance/providers") {
-    return handleFinancialProviders();
+    return withCors(handleFinancialProviders());
   }
 
   if (request.method === "POST" && pathname === "/finance/import") {
-    return handleFinancialImport(request);
+    return withCors(await handleFinancialImport(request));
   }
 
   if (request.method === "GET" && pathname === "/finance/accounts") {
-    return handleFinancialAccounts(request);
+    return withCors(await handleFinancialAccounts(request));
   }
 
   if (request.method === "GET" && pathname === "/finance/transactions") {
-    return handleFinancialTransactions(request);
+    return withCors(await handleFinancialTransactions(request));
   }
 
   if (request.method === "POST" && pathname === "/actions/parse") {
-    return handleActionParse(request);
+    return withCors(await handleActionParse(request));
   }
 
   if (request.method === "POST" && pathname === "/families") {
-    return handleFamilyCreate(request);
+    return withCors(await handleFamilyCreate(request));
   }
 
   const familyJoinMatch = pathname.match(/^\/families\/([^/]+)\/join$/);
   if (request.method === "POST" && familyJoinMatch) {
-    return handleFamilyJoin(request, familyJoinMatch[1]);
+    return withCors(await handleFamilyJoin(request, familyJoinMatch[1]));
   }
 
   const familyLeaveMatch = pathname.match(/^\/families\/([^/]+)\/leave$/);
   if (request.method === "POST" && familyLeaveMatch) {
-    return handleFamilyLeave(request, familyLeaveMatch[1]);
+    return withCors(await handleFamilyLeave(request, familyLeaveMatch[1]));
   }
 
   const familyTodosMatch = pathname.match(/^\/families\/([^/]+)\/todos$/);
   if (familyTodosMatch) {
     if (request.method === "GET") {
-      return handleFamilyTodoList(familyTodosMatch[1]);
+      return withCors(await handleFamilyTodoList(familyTodosMatch[1]));
     }
     if (request.method === "POST") {
-      return handleFamilyTodoCreate(request, familyTodosMatch[1]);
+      return withCors(
+        await handleFamilyTodoCreate(request, familyTodosMatch[1])
+      );
     }
   }
 
   const familyMealsMatch = pathname.match(/^\/families\/([^/]+)\/meals$/);
   if (familyMealsMatch) {
     if (request.method === "GET") {
-      return handleFamilyMealList(familyMealsMatch[1]);
+      return withCors(await handleFamilyMealList(familyMealsMatch[1]));
     }
     if (request.method === "POST") {
-      return handleFamilyMealCreate(request, familyMealsMatch[1]);
+      return withCors(
+        await handleFamilyMealCreate(request, familyMealsMatch[1])
+      );
     }
   }
 
   const familyProjectsMatch = pathname.match(/^\/families\/([^/]+)\/projects$/);
   if (familyProjectsMatch) {
     if (request.method === "GET") {
-      return handleFamilyProjectList(familyProjectsMatch[1]);
+      return withCors(await handleFamilyProjectList(familyProjectsMatch[1]));
     }
     if (request.method === "POST") {
-      return handleFamilyProjectCreate(request, familyProjectsMatch[1]);
+      return withCors(
+        await handleFamilyProjectCreate(request, familyProjectsMatch[1])
+      );
     }
   }
 
@@ -195,14 +251,18 @@ export const handler = async (request: Request): Promise<Response> => {
   );
   if (familyTodoMatch) {
     if (request.method === "PATCH") {
-      return handleFamilyTodoUpdate(
-        request,
-        familyTodoMatch[1],
-        familyTodoMatch[2]
+      return withCors(
+        await handleFamilyTodoUpdate(
+          request,
+          familyTodoMatch[1],
+          familyTodoMatch[2]
+        )
       );
     }
     if (request.method === "DELETE") {
-      return handleFamilyTodoDelete(familyTodoMatch[1], familyTodoMatch[2]);
+      return withCors(
+        await handleFamilyTodoDelete(familyTodoMatch[1], familyTodoMatch[2])
+      );
     }
   }
 
@@ -211,16 +271,20 @@ export const handler = async (request: Request): Promise<Response> => {
   );
   if (familyProjectMatch) {
     if (request.method === "PATCH") {
-      return handleFamilyProjectUpdate(
-        request,
-        familyProjectMatch[1],
-        familyProjectMatch[2]
+      return withCors(
+        await handleFamilyProjectUpdate(
+          request,
+          familyProjectMatch[1],
+          familyProjectMatch[2]
+        )
       );
     }
     if (request.method === "DELETE") {
-      return handleFamilyProjectDelete(
-        familyProjectMatch[1],
-        familyProjectMatch[2]
+      return withCors(
+        await handleFamilyProjectDelete(
+          familyProjectMatch[1],
+          familyProjectMatch[2]
+        )
       );
     }
   }
@@ -230,14 +294,18 @@ export const handler = async (request: Request): Promise<Response> => {
   );
   if (familyMealMatch) {
     if (request.method === "PATCH") {
-      return handleFamilyMealUpdate(
-        request,
-        familyMealMatch[1],
-        familyMealMatch[2]
+      return withCors(
+        await handleFamilyMealUpdate(
+          request,
+          familyMealMatch[1],
+          familyMealMatch[2]
+        )
       );
     }
     if (request.method === "DELETE") {
-      return handleFamilyMealDelete(familyMealMatch[1], familyMealMatch[2]);
+      return withCors(
+        await handleFamilyMealDelete(familyMealMatch[1], familyMealMatch[2])
+      );
     }
   }
 
@@ -248,5 +316,5 @@ export const handler = async (request: Request): Promise<Response> => {
     }
   });
 
-  return notFound(pathname);
+  return withCors(notFound(pathname));
 };
