@@ -12,6 +12,7 @@ import {
   handleCalendarEventList,
   handleCalendarEventUpdate,
   handleCalendarList,
+  handleCalendarOAuthStart,
   handleCalendarProviders,
   handleCalendarSelect,
   handleCalendarSetup
@@ -139,6 +140,10 @@ export const handler = async (request: Request): Promise<Response> => {
 
   if (request.method === "GET" && pathname === "/calendar/providers") {
     return withCors(handleCalendarProviders());
+  }
+
+  if (request.method === "POST" && pathname === "/calendar/oauth/start") {
+    return withCors(await handleCalendarOAuthStart(request));
   }
 
   if (request.method === "POST" && pathname === "/calendar/setup") {

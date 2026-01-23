@@ -9,10 +9,11 @@ import { getDatabaseAdapter } from "../db/client";
 
 const calendarConnections = new Map<CalendarProvider, CalendarConnection>();
 const calendarsByProvider = new Map<CalendarProvider, Map<string, CalendarInfo>>();
-const selectedCalendars = new Map<CalendarProvider, string>();
+const selectedCalendarsByProvider = new Map<CalendarProvider, Map<string, string>>();
 const eventsByCalendar = new Map<string, Map<string, CalendarEvent>>();
 
 type CalendarSelectionRow = {
+  family_id: string;
   provider: CalendarProvider;
   calendar_id: string;
   updated_at: string;
@@ -32,6 +33,19 @@ const getCalendarStore = (provider: CalendarProvider): Map<string, CalendarInfo>
 
   const next = new Map<string, CalendarInfo>();
   calendarsByProvider.set(provider, next);
+  return next;
+};
+
+const getSelectedCalendarStore = (
+  provider: CalendarProvider
+): Map<string, string> => {
+  const existing = selectedCalendarsByProvider.get(provider);
+  if (existing) {
+    return existing;
+  }
+
+  const next = new Map<string, string>();
+  selectedCalendarsByProvider.set(provider, next);
   return next;
 };
 
@@ -75,23 +89,27 @@ export const getCalendarById = (
 
 export const setSelectedCalendar = (
   provider: CalendarProvider,
+  familyId: string,
   calendarId: string,
   adapter?: DatabaseAdapter
 ): Promise<void> => {
-  selectedCalendars.set(provider, calendarId);
+  const store = getSelectedCalendarStore(provider);
+  store.set(familyId, calendarId);
   const now = new Date().toISOString();
   return getAdapter(adapter).then((db) =>
     db.execute(
-      `INSERT INTO calendar_selections (
+      `INSERT INTO family_calendar_selections (
+        family_id,
         provider,
         calendar_id,
         updated_at
       ) VALUES (
+        ${escapeLiteral(familyId)},
         ${escapeLiteral(provider)},
         ${escapeLiteral(calendarId)},
         ${escapeLiteral(now)}
       )
-      ON CONFLICT(provider) DO UPDATE SET
+      ON CONFLICT(family_id, provider) DO UPDATE SET
         calendar_id = excluded.calendar_id,
         updated_at = excluded.updated_at`
     )
@@ -100,25 +118,28 @@ export const setSelectedCalendar = (
 
 export const getSelectedCalendarId = (
   provider: CalendarProvider,
+  familyId: string,
   adapter?: DatabaseAdapter
 ): Promise<string | null> => {
-  const cached = selectedCalendars.get(provider);
+  const store = getSelectedCalendarStore(provider);
+  const cached = store.get(familyId);
   if (cached) {
     return Promise.resolve(cached);
   }
 
   return getAdapter(adapter).then(async (db) => {
     const rows = await db.query<CalendarSelectionRow>(
-      `SELECT provider, calendar_id, updated_at
-       FROM calendar_selections
-       WHERE provider = ${escapeLiteral(provider)}
+      `SELECT family_id, provider, calendar_id, updated_at
+       FROM family_calendar_selections
+       WHERE family_id = ${escapeLiteral(familyId)}
+       AND provider = ${escapeLiteral(provider)}
        LIMIT 1`
     );
     const row = rows[0];
     if (!row) {
       return null;
     }
-    selectedCalendars.set(provider, row.calendar_id);
+    store.set(familyId, row.calendar_id);
     return row.calendar_id;
   });
 };

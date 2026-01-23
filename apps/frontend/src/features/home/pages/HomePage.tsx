@@ -209,10 +209,15 @@ export const HomePage = () => {
   }, [selectedFamily]);
 
   const refreshCalendar = async () => {
+    if (!selectedFamily) {
+      setEvents([]);
+      return;
+    }
     setIsLoadingCalendar(true);
     setCalendarError(null);
     try {
       const response = await fetchCalendarEvents({
+        familyId: selectedFamily,
         start: todayRange.start,
         end: todayRange.end,
         limit: 12
@@ -261,7 +266,7 @@ export const HomePage = () => {
 
   useEffect(() => {
     refreshCalendar();
-  }, [todayRange.end, todayRange.start]);
+  }, [todayRange.end, todayRange.start, selectedFamily]);
 
   useEffect(() => {
     refreshFamily(selectedFamily);
@@ -427,19 +432,24 @@ export const HomePage = () => {
         });
       }
 
-      selectedEvents.forEach((event) => {
-        if (event.start?.dateTime && event.end?.dateTime) {
-          tasks.push(
-            createCalendarEvent({
-              title: event.title,
-              description: event.description,
-              start: event.start,
-              end: event.end,
-              location: event.location
-            })
-          );
-        }
-      });
+      if (selectedFamily) {
+        selectedEvents.forEach((event) => {
+          if (event.start?.dateTime && event.end?.dateTime) {
+            tasks.push(
+              createCalendarEvent(
+                {
+                  title: event.title,
+                  description: event.description,
+                  start: event.start,
+                  end: event.end,
+                  location: event.location
+                },
+                { familyId: selectedFamily }
+              )
+            );
+          }
+        });
+      }
 
       const results = await Promise.allSettled(tasks);
       const failures = results.filter((result) => result.status === "rejected");

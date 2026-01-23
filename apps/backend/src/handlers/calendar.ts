@@ -5,6 +5,7 @@ import type {
   CalendarEventListFilters,
   CalendarEventUpdatePayload,
   CalendarInfo,
+  CalendarOAuthStartPayload,
   CalendarSelectPayload,
   CalendarSetupPayload,
   CalendarProvider,
@@ -18,6 +19,7 @@ import {
 } from "../data/calendar";
 import {
   GoogleCalendarConfigError,
+  createGoogleAuthorizationUrl,
   createGoogleCalendar,
   createGoogleEvent,
   deleteGoogleEvent,
@@ -32,6 +34,65 @@ import { normalizeString } from "../utils/strings";
 
 const supportedProviders: CalendarProvider[] = ["google"];
 
+type CalendarIntegration = {
+  createAuthorizationUrl: (redirectUri: string, state?: string) => string;
+  exchangeAuthorizationCode: (
+    authorizationCode: string,
+    redirectUri: string
+  ) => Promise<{ connection: CalendarConnection }>;
+  listCalendars: (connection: CalendarConnection) => Promise<CalendarInfo[]>;
+  getCalendar: (
+    connection: CalendarConnection,
+    calendarId: string
+  ) => Promise<CalendarInfo>;
+  createCalendar: (
+    connection: CalendarConnection,
+    name: string,
+    description: string | undefined,
+    timezone: string
+  ) => Promise<CalendarInfo>;
+  listEvents: (
+    connection: CalendarConnection,
+    calendarId: string,
+    filters: {
+      start?: string;
+      end?: string;
+      search?: string;
+      limit?: number;
+    }
+  ) => Promise<CalendarEvent[]>;
+  createEvent: (
+    connection: CalendarConnection,
+    calendarId: string,
+    event: CalendarEvent
+  ) => Promise<CalendarEvent>;
+  updateEvent: (
+    connection: CalendarConnection,
+    calendarId: string,
+    eventId: string,
+    event: Partial<CalendarEvent>
+  ) => Promise<CalendarEvent>;
+  deleteEvent: (
+    connection: CalendarConnection,
+    calendarId: string,
+    eventId: string
+  ) => Promise<void>;
+};
+
+const calendarIntegrations: Record<CalendarProvider, CalendarIntegration> = {
+  google: {
+    createAuthorizationUrl: createGoogleAuthorizationUrl,
+    exchangeAuthorizationCode: exchangeGoogleAuthorizationCode,
+    listCalendars: listGoogleCalendars,
+    getCalendar: getGoogleCalendar,
+    createCalendar: createGoogleCalendar,
+    listEvents: listGoogleEvents,
+    createEvent: createGoogleEvent,
+    updateEvent: updateGoogleEvent,
+    deleteEvent: deleteGoogleEvent
+  }
+};
+
 const ensureProvider = (provider: string): CalendarProvider | null => {
   if (!supportedProviders.includes(provider as CalendarProvider)) {
     return null;
@@ -39,13 +100,23 @@ const ensureProvider = (provider: string): CalendarProvider | null => {
   return provider as CalendarProvider;
 };
 
+const getCalendarIntegration = (
+  provider: CalendarProvider
+): CalendarIntegration => calendarIntegrations[provider];
+
 const ensureConnected = (
   provider: CalendarProvider
 ): CalendarConnection | null => getCalendarConnection(provider);
 
 const ensureSelectedCalendar = async (
-  provider: CalendarProvider
-): Promise<string | null> => getSelectedCalendarId(provider);
+  provider: CalendarProvider,
+  familyId: string
+): Promise<string | null> => getSelectedCalendarId(provider, familyId);
+
+const ensureFamilyId = (value?: string | null): string | null => {
+  const normalized = normalizeString(value ?? "");
+  return normalized || null;
+};
 
 const normalizeParticipant = (
   participant: CalendarParticipant
@@ -161,6 +232,59 @@ export const handleCalendarProviders = async (): Promise<Response> =>
     providers: supportedProviders
   });
 
+export const handleCalendarOAuthStart = async (
+  request: Request
+): Promise<Response> => {
+  const body = await parseJsonBody<CalendarOAuthStartPayload>(request);
+  if (!body) {
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Expected application/json payload.",
+      messageKey: "errors.request.invalid_json",
+      status: 400
+    });
+  }
+
+  const provider = ensureProvider(normalizeString(body.provider ?? ""));
+  if (!provider) {
+    return createErrorResponse({
+      code: "bad_request",
+      message: "Unsupported calendar provider.",
+      messageKey: "errors.calendar.provider_unsupported",
+      status: 400,
+      details: { provider: body.provider }
+    });
+  }
+
+  const redirectUri = normalizeString(body.redirectUri ?? "");
+  if (!redirectUri) {
+    return createErrorResponse({
+      code: "bad_request",
+      message: "redirectUri is required.",
+      messageKey: "errors.calendar.redirect_uri_required",
+      status: 400,
+      details: { field: "redirectUri", reason: "required" }
+    });
+  }
+
+  try {
+    const integration = getCalendarIntegration(provider);
+    const authUrl = integration.createAuthorizationUrl(
+      redirectUri,
+      body.state ?? undefined
+    );
+    return createJsonResponse({
+      status: "pending",
+      provider,
+      redirectUri,
+      authUrl,
+      state: body.state ?? null
+    });
+  } catch (error) {
+    return createCalendarErrorResponse(error);
+  }
+};
+
 export const handleCalendarSetup = async (
   request: Request
 ): Promise<Response> => {
@@ -199,7 +323,8 @@ export const handleCalendarSetup = async (
   }
 
   try {
-    const { connection } = await exchangeGoogleAuthorizationCode(
+    const integration = getCalendarIntegration(provider);
+    const { connection } = await integration.exchangeAuthorizationCode(
       body.authorizationCode,
       body.redirectUri
     );
@@ -231,6 +356,17 @@ export const handleCalendarList = async (
     });
   }
 
+  const familyId = ensureFamilyId(url.searchParams.get("familyId"));
+  if (!familyId) {
+    return createErrorResponse({
+      code: "bad_request",
+      message: "familyId is required.",
+      messageKey: "errors.calendar.family_required",
+      status: 400,
+      details: { field: "familyId", reason: "required" }
+    });
+  }
+
   const connection = ensureConnected(provider);
   if (!connection) {
     return createErrorResponse({
@@ -243,11 +379,13 @@ export const handleCalendarList = async (
   }
 
   try {
-    const calendars = await listGoogleCalendars(connection);
+    const integration = getCalendarIntegration(provider);
+    const calendars = await integration.listCalendars(connection);
     return createJsonResponse({
+      familyId,
       provider,
       calendars,
-      selectedCalendarId: await getSelectedCalendarId(provider)
+      selectedCalendarId: await getSelectedCalendarId(provider, familyId)
     });
   } catch (error) {
     return createCalendarErrorResponse(error);
@@ -278,6 +416,17 @@ export const handleCalendarSelect = async (
     });
   }
 
+  const familyId = ensureFamilyId(body.familyId);
+  if (!familyId) {
+    return createErrorResponse({
+      code: "bad_request",
+      message: "familyId is required.",
+      messageKey: "errors.calendar.family_required",
+      status: 400,
+      details: { field: "familyId", reason: "required" }
+    });
+  }
+
   const connection = ensureConnected(provider);
   if (!connection) {
     return createErrorResponse({
@@ -292,8 +441,9 @@ export const handleCalendarSelect = async (
   let calendar: CalendarInfo | null = null;
 
   try {
+    const integration = getCalendarIntegration(provider);
     if (body.calendarId) {
-      calendar = await getGoogleCalendar(connection, body.calendarId);
+      calendar = await integration.getCalendar(connection, body.calendarId);
     } else {
       const name = normalizeString(body.name ?? "");
       if (!name) {
@@ -306,7 +456,7 @@ export const handleCalendarSelect = async (
         });
       }
 
-      calendar = await createGoogleCalendar(
+      calendar = await integration.createCalendar(
         connection,
         name,
         normalizeString(body.description ?? "") || undefined,
@@ -314,11 +464,12 @@ export const handleCalendarSelect = async (
       );
     }
 
-    await setSelectedCalendar(provider, calendar.id);
+    await setSelectedCalendar(provider, familyId, calendar.id);
 
     return createJsonResponse({
       status: "selected",
       provider,
+      familyId,
       calendar
     });
   } catch (error) {
@@ -341,6 +492,7 @@ export const handleCalendarEventCreate = async (
 
   const url = new URL(request.url);
   const providerParam = normalizeString(url.searchParams.get("provider") ?? "");
+  const familyId = ensureFamilyId(url.searchParams.get("familyId"));
   const provider = ensureProvider(providerParam || "google");
   if (!provider) {
     return createErrorResponse({
@@ -349,6 +501,16 @@ export const handleCalendarEventCreate = async (
       messageKey: "errors.calendar.provider_unsupported",
       status: 400,
       details: { provider: providerParam }
+    });
+  }
+
+  if (!familyId) {
+    return createErrorResponse({
+      code: "bad_request",
+      message: "familyId is required.",
+      messageKey: "errors.calendar.family_required",
+      status: 400,
+      details: { field: "familyId", reason: "required" }
     });
   }
 
@@ -363,7 +525,7 @@ export const handleCalendarEventCreate = async (
     });
   }
 
-  const calendarId = await ensureSelectedCalendar(provider);
+  const calendarId = await ensureSelectedCalendar(provider, familyId);
   if (!calendarId) {
     return createErrorResponse({
       code: "conflict",
@@ -412,7 +574,8 @@ export const handleCalendarEventCreate = async (
   };
 
   try {
-    const created = await createGoogleEvent(connection, calendarId, event);
+    const integration = getCalendarIntegration(provider);
+    const created = await integration.createEvent(connection, calendarId, event);
     return createJsonResponse({ status: "created", event: created });
   } catch (error) {
     return createCalendarErrorResponse(error);
@@ -446,6 +609,16 @@ export const handleCalendarEventUpdate = async (
     });
   }
 
+  if (!familyId) {
+    return createErrorResponse({
+      code: "bad_request",
+      message: "familyId is required.",
+      messageKey: "errors.calendar.family_required",
+      status: 400,
+      details: { field: "familyId", reason: "required" }
+    });
+  }
+
   const connection = ensureConnected(provider);
   if (!connection) {
     return createErrorResponse({
@@ -457,7 +630,7 @@ export const handleCalendarEventUpdate = async (
     });
   }
 
-  const calendarId = await ensureSelectedCalendar(provider);
+  const calendarId = await ensureSelectedCalendar(provider, familyId);
   if (!calendarId) {
     return createErrorResponse({
       code: "conflict",
@@ -485,7 +658,8 @@ export const handleCalendarEventUpdate = async (
   };
 
   try {
-    const updated = await updateGoogleEvent(
+    const integration = getCalendarIntegration(provider);
+    const updated = await integration.updateEvent(
       connection,
       calendarId,
       eventId,
@@ -503,6 +677,7 @@ export const handleCalendarEventDelete = async (
 ): Promise<Response> => {
   const url = new URL(request.url);
   const providerParam = normalizeString(url.searchParams.get("provider") ?? "");
+  const familyId = ensureFamilyId(url.searchParams.get("familyId"));
   const provider = ensureProvider(providerParam || "google");
   if (!provider) {
     return createErrorResponse({
@@ -511,6 +686,16 @@ export const handleCalendarEventDelete = async (
       messageKey: "errors.calendar.provider_unsupported",
       status: 400,
       details: { provider: providerParam }
+    });
+  }
+
+  if (!familyId) {
+    return createErrorResponse({
+      code: "bad_request",
+      message: "familyId is required.",
+      messageKey: "errors.calendar.family_required",
+      status: 400,
+      details: { field: "familyId", reason: "required" }
     });
   }
 
@@ -525,7 +710,7 @@ export const handleCalendarEventDelete = async (
     });
   }
 
-  const calendarId = await ensureSelectedCalendar(provider);
+  const calendarId = await ensureSelectedCalendar(provider, familyId);
   if (!calendarId) {
     return createErrorResponse({
       code: "conflict",
@@ -537,7 +722,8 @@ export const handleCalendarEventDelete = async (
   }
 
   try {
-    await deleteGoogleEvent(connection, calendarId, eventId);
+    const integration = getCalendarIntegration(provider);
+    await integration.deleteEvent(connection, calendarId, eventId);
     return createJsonResponse({ status: "deleted", eventId });
   } catch (error) {
     return createCalendarErrorResponse(error);
@@ -549,6 +735,7 @@ export const handleCalendarEventList = async (
 ): Promise<Response> => {
   const url = new URL(request.url);
   const providerParam = normalizeString(url.searchParams.get("provider") ?? "");
+  const familyId = ensureFamilyId(url.searchParams.get("familyId"));
   const provider = ensureProvider(providerParam || "google");
   if (!provider) {
     return createErrorResponse({
@@ -557,6 +744,16 @@ export const handleCalendarEventList = async (
       messageKey: "errors.calendar.provider_unsupported",
       status: 400,
       details: { provider: providerParam }
+    });
+  }
+
+  if (!familyId) {
+    return createErrorResponse({
+      code: "bad_request",
+      message: "familyId is required.",
+      messageKey: "errors.calendar.family_required",
+      status: 400,
+      details: { field: "familyId", reason: "required" }
     });
   }
 
@@ -571,7 +768,7 @@ export const handleCalendarEventList = async (
     });
   }
 
-  const calendarId = await ensureSelectedCalendar(provider);
+  const calendarId = await ensureSelectedCalendar(provider, familyId);
   if (!calendarId) {
     return createErrorResponse({
       code: "conflict",
@@ -585,7 +782,8 @@ export const handleCalendarEventList = async (
   const filters = normalizeEventFilters(url);
 
   try {
-    const events = await listGoogleEvents(connection, calendarId, {
+    const integration = getCalendarIntegration(provider);
+    const events = await integration.listEvents(connection, calendarId, {
       start: filters.start,
       end: filters.end,
       search: filters.search,
@@ -594,6 +792,7 @@ export const handleCalendarEventList = async (
     const filtered = applyFilters(events, filters);
 
     return createJsonResponse({
+      familyId,
       calendarId,
       provider,
       filters,
