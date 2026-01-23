@@ -11,26 +11,21 @@ import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils
 import { isEmail } from "../utils/strings";
 
 const oauthProviders: OAuthProvider[] = ["apple", "google", "facebook"];
+const oauthProviderLabels: Record<OAuthProvider, string> = {
+  apple: "Apple",
+  google: "Google",
+  facebook: "Facebook"
+};
 const emailActions: EmailAction[] = ["login", "signup"];
 
 export const handleProviders = (): Response =>
   createJsonResponse({
     providers: [
-      {
-        id: "apple",
+      ...oauthProviders.map((provider) => ({
+        id: provider,
         type: "oauth",
-        displayName: "Apple"
-      },
-      {
-        id: "google",
-        type: "oauth",
-        displayName: "Google"
-      },
-      {
-        id: "facebook",
-        type: "oauth",
-        displayName: "Facebook"
-      },
+        displayName: oauthProviderLabels[provider]
+      })),
       {
         id: "email",
         type: "passwordless",
