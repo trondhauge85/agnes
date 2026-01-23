@@ -79,6 +79,8 @@ export const getApiErrorDescriptor = (error: unknown): ApiError => {
 };
 
 export const apiRequest = async <T>(url: string, options: RequestOptions = {}): Promise<T> => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : "");
+  const requestUrl = baseUrl ? new URL(url, baseUrl).toString() : url;
   const session = getSession();
   const headers = new Headers(options.headers ?? {});
 
@@ -86,7 +88,7 @@ export const apiRequest = async <T>(url: string, options: RequestOptions = {}): 
     headers.set("Authorization", `Bearer ${session.value}`);
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(requestUrl, {
     ...options,
     headers,
     credentials: "include",
@@ -118,7 +120,7 @@ export const apiRequest = async <T>(url: string, options: RequestOptions = {}): 
       }
     }
     throw new ApiRequestError(
-      buildFallbackApiError(response.status, message, { url })
+      buildFallbackApiError(response.status, message, { url: requestUrl })
     );
   }
 
