@@ -6,6 +6,7 @@ import type {
   LlmTaskRequest,
   LlmTaskResult
 } from "./types";
+import { createLogger } from "@agnes/shared";
 import { PromptRegistry } from "./prompts/promptRegistry";
 import { SkillRegistry } from "./skills/skillRegistry";
 import { ToolRegistry } from "./tools/toolRegistry";
@@ -23,6 +24,9 @@ export class LlmService {
   constructor(private readonly deps: LlmServiceDependencies) {}
 
   async runTask(task: LlmTaskRequest): Promise<LlmTaskResult> {
+    const logger = createLogger("llm.service", {
+      skillName: task.skillName
+    });
     const skill = this.deps.skills.get(task.skillName);
     if (!skill) {
       throw new Error(`Unknown skill: ${task.skillName}`);
@@ -65,7 +69,39 @@ export class LlmService {
       responseSchema: skill.responseSchema
     };
 
-    const response = await this.deps.provider.generate(request);
+    logger.info("llm.request", {
+      data: {
+        promptId: skill.promptId,
+        toolNames: tools.map((tool) => tool.definition.name),
+        contextScope,
+        contextQuery: task.contextQuery ?? null,
+        contextHits: contextResults.length,
+        request
+      }
+    });
+
+    const start = Date.now();
+    let response;
+
+    try {
+      response = await this.deps.provider.generate(request);
+    } catch (error) {
+      logger.error("llm.request_failed", {
+        data: {
+          durationMs: Date.now() - start
+        },
+        error
+      });
+      throw error;
+    }
+
+    logger.info("llm.response", {
+      data: {
+        durationMs: Date.now() - start,
+        response,
+        contextUsed: contextResults.map((result) => result.document.id)
+      }
+    });
 
     return {
       response,
