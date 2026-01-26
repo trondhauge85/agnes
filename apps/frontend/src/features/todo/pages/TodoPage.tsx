@@ -1,4 +1,5 @@
 import {
+  Alert,
   Avatar,
   AvatarGroup,
   Box,
@@ -11,46 +12,72 @@ import {
   Stack,
   Typography
 } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
 
-const todos = [
-  {
-    title: "Restock pantry staples",
-    notes: "Add olive oil, pasta, and oats",
-    due: "Today",
-    priority: "High",
-    assignees: ["Ava", "Noah"]
-  },
-  {
-    title: "Plan weekend playdate",
-    notes: "Confirm with the Johnsons",
-    due: "Tomorrow",
-    priority: "Medium",
-    assignees: ["Liam"]
-  },
-  {
-    title: "Pay after-school club fee",
-    notes: "Due before Friday",
-    due: "Fri",
-    priority: "High",
-    assignees: ["Mia"]
-  },
-  {
-    title: "Book dentist appointments",
-    notes: "Look for afternoon slots",
-    due: "Next week",
-    priority: "Low",
-    assignees: ["Ava", "Mia"]
-  },
-  {
-    title: "Update family emergency contacts",
-    notes: "Add daycare front desk",
-    due: "Next week",
-    priority: "Low",
-    assignees: ["Noah"]
-  }
-];
+import { getApiErrorDescriptor } from "../../../shared/api";
+import { getSelectedFamilyId } from "../../families/services/familyStorage";
+import { fetchFamilyDetail } from "../../family/services/familyApi";
+import { fetchFamilyTodos, type FamilyTodo } from "../../home/services/homeApi";
 
 export const TodoPage = () => {
+  const familyId = getSelectedFamilyId();
+  const [todos, setTodos] = useState<FamilyTodo[]>([]);
+  const [assignees, setAssignees] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!familyId) {
+      return;
+    }
+
+    let isActive = true;
+    const loadTodos = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const [todoResponse, family] = await Promise.all([
+          fetchFamilyTodos(familyId),
+          fetchFamilyDetail(familyId)
+        ]);
+        if (!isActive) {
+          return;
+        }
+        setTodos(todoResponse.todos);
+        const memberMap = family.members.reduce<Record<string, string>>((acc, member) => {
+          acc[member.userId] = member.displayName;
+          return acc;
+        }, {});
+        setAssignees(memberMap);
+      } catch (err) {
+        if (isActive) {
+          const descriptor = getApiErrorDescriptor(err);
+          setError(descriptor.message);
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadTodos();
+
+    return () => {
+      isActive = false;
+    };
+  }, [familyId]);
+
+  const summary = useMemo(() => {
+    const openCount = todos.filter((todo) => todo.status === "open").length;
+    const completedCount = todos.filter((todo) => todo.status === "completed").length;
+    return {
+      openCount,
+      completedCount,
+      totalCount: todos.length
+    };
+  }, [todos]);
+
   return (
     <Box sx={{ backgroundColor: "background.default", minHeight: "100%" }}>
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -64,11 +91,17 @@ export const TodoPage = () => {
             </Typography>
           </Box>
 
+          {!familyId ? (
+            <Alert severity="warning">Select a family to view todos.</Alert>
+          ) : null}
+
+          {error ? <Alert severity="error">{error}</Alert> : null}
+
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             {[
-              { label: "Open", value: "8 tasks", detail: "2 due today" },
-              { label: "Completed", value: "14 this week", detail: "Great momentum" },
-              { label: "Shared", value: "3 people", detail: "All hands on deck" }
+              { label: "Open", value: `${summary.openCount} tasks`, detail: "Awaiting action" },
+              { label: "Completed", value: `${summary.completedCount} tasks`, detail: "Recently wrapped up" },
+              { label: "All", value: `${summary.totalCount} tasks`, detail: "Across the family" }
             ].map((stat) => (
               <Paper
                 key={stat.label}
@@ -85,7 +118,7 @@ export const TodoPage = () => {
                   {stat.label}
                 </Typography>
                 <Typography variant="h5" fontWeight={700} sx={{ mt: 0.5 }}>
-                  {stat.value}
+                  {isLoading ? "Loading..." : stat.value}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {stat.detail}
@@ -117,50 +150,72 @@ export const TodoPage = () => {
             </Stack>
             <Divider />
             <List disablePadding>
-              {todos.map((todo, index) => (
-                <Box key={todo.title}>
-                  <ListItem
-                    sx={{
-                      px: 3,
-                      py: 2.5,
-                      alignItems: "flex-start",
-                      flexDirection: { xs: "column", sm: "row" },
-                      gap: 2
-                    }}
-                  >
-                    <Box sx={{ flex: 1 }}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography variant="subtitle1" fontWeight={700}>
-                          {todo.title}
-                        </Typography>
-                        <Chip
-                          label={todo.priority}
-                          size="small"
-                          color={todo.priority === "High" ? "error" : "default"}
-                          variant={todo.priority === "High" ? "filled" : "outlined"}
-                        />
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {todo.notes}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Due {todo.due}
-                      </Typography>
+              {isLoading ? (
+                <ListItem>
+                  <Typography variant="body2" color="text.secondary">
+                    Loading todos...
+                  </Typography>
+                </ListItem>
+              ) : todos.length === 0 ? (
+                <ListItem>
+                  <Typography variant="body2" color="text.secondary">
+                    No todos yet. Add items in your family dashboard to see them here.
+                  </Typography>
+                </ListItem>
+              ) : (
+                todos.map((todo, index) => {
+                  const assigneeName = todo.assignedToUserId
+                    ? assignees[todo.assignedToUserId] ?? "Assigned member"
+                    : "Unassigned";
+                  return (
+                    <Box key={todo.id}>
+                      <ListItem
+                        sx={{
+                          px: 3,
+                          py: 2.5,
+                          alignItems: "flex-start",
+                          flexDirection: { xs: "column", sm: "row" },
+                          gap: 2
+                        }}
+                      >
+                        <Box sx={{ flex: 1 }}>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Typography variant="subtitle1" fontWeight={700}>
+                              {todo.title}
+                            </Typography>
+                            <Chip
+                              label={todo.status === "completed" ? "Completed" : "Open"}
+                              size="small"
+                              color={todo.status === "completed" ? "success" : "warning"}
+                              variant="outlined"
+                            />
+                          </Stack>
+                          {todo.notes ? (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                              {todo.notes}
+                            </Typography>
+                          ) : null}
+                          <Typography variant="caption" color="text.secondary">
+                            Updated {new Date(todo.updatedAt).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Typography variant="caption" color="text.secondary">
+                            Owner
+                          </Typography>
+                          <AvatarGroup max={2} sx={{ "& .MuiAvatar-root": { width: 28, height: 28 } }}>
+                            <Avatar>{assigneeName.slice(0, 1)}</Avatar>
+                          </AvatarGroup>
+                          <Typography variant="body2" color="text.secondary">
+                            {assigneeName}
+                          </Typography>
+                        </Stack>
+                      </ListItem>
+                      {index < todos.length - 1 && <Divider component="li" />}
                     </Box>
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <Typography variant="caption" color="text.secondary">
-                        Owners
-                      </Typography>
-                      <AvatarGroup max={3} sx={{ "& .MuiAvatar-root": { width: 28, height: 28 } }}>
-                        {todo.assignees.map((assignee) => (
-                          <Avatar key={assignee}>{assignee[0]}</Avatar>
-                        ))}
-                      </AvatarGroup>
-                    </Stack>
-                  </ListItem>
-                  {index < todos.length - 1 && <Divider component="li" />}
-                </Box>
-              ))}
+                  );
+                })
+              )}
             </List>
           </Paper>
         </Stack>

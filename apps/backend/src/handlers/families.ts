@@ -139,6 +139,23 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
   });
 };
 
+export const handleFamilyDetail = async (familyId: string): Promise<Response> => {
+  const family = await findFamily(familyId);
+  if (!family) {
+    return createErrorResponse({
+      code: "not_found",
+      message: "Family not found.",
+      messageKey: "errors.family.not_found",
+      status: 404,
+      details: { familyId }
+    });
+  }
+
+  return createJsonResponse({
+    family: serializeFamily(family)
+  });
+};
+
 export const handleFamilyJoin = async (
   request: Request,
   familyId: string
