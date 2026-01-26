@@ -80,7 +80,7 @@ export const CalendarSetupPage = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const redirectUri = useMemo(
-    () => `${window.location.origin}/calendar/oauth/callback`,
+    () => `http://localhost:3000/redirect/google`,//`${window.location.origin}/calendar/oauth/callback`,
     []
   );
 

@@ -55,7 +55,7 @@ export const router = createBrowserRouter([
     element: <OidcCallbackPage />,
   },
   {
-    path: "/calendar/oauth/callback",
+    path: "/redirect/google",
     element: <CalendarOAuthCallbackPage />,
   },
   {

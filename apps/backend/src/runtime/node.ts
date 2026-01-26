@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { Readable } from "node:stream";
 import { handler } from "../router";
 
-const port = Number(process.env.PORT ?? 3000);
+const port = Number(process.env.PORT ?? 3011);
 
 const server = createServer(async (req, res) => {
   const origin = `http://${req.headers.host ?? "localhost"}`;

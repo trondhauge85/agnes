@@ -79,7 +79,7 @@ export const getApiErrorDescriptor = (error: unknown): ApiError => {
 };
 
 export const apiRequest = async <T>(url: string, options: RequestOptions = {}): Promise<T> => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : "");
+  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:3011" : "");
   const requestUrl = baseUrl ? new URL(url, baseUrl).toString() : url;
   const session = getSession();
   const headers = new Headers(options.headers ?? {});
