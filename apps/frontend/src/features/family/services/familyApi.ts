@@ -40,6 +40,26 @@ export type JoinFamilyPayload = {
   age?: number;
 };
 
+export type FamilyDetail = {
+  id: string;
+  name: string;
+  pictureUrl: string;
+  createdAt: string;
+  metadata: {
+    interests: string[];
+    goals: string[];
+  };
+  members: Array<{
+    userId: string;
+    displayName: string;
+    role: string;
+    joinedAt: string;
+    email?: string;
+    phoneNumber?: string;
+    age?: number;
+  }>;
+};
+
 export const joinFamily = async ({ familyId, ...payload }: JoinFamilyPayload) => {
   return apiRequest<FamilyJoinResponse>(`/families/${familyId}/join`, {
     method: "POST",
@@ -49,3 +69,6 @@ export const joinFamily = async ({ familyId, ...payload }: JoinFamilyPayload) =>
     body: JSON.stringify(payload),
   });
 };
+
+export const fetchFamilyDetail = async (familyId: string): Promise<FamilyDetail> =>
+  apiRequest<{ family: FamilyDetail }>(`/families/${familyId}`).then((response) => response.family);

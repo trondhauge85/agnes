@@ -19,9 +19,16 @@ import {
 } from "./handlers/calendar";
 import {
   handleFamilyCreate,
+  handleFamilyDetail,
   handleFamilyJoin,
   handleFamilyLeave
 } from "./handlers/families";
+import {
+  handleFamilyShoppingCreate,
+  handleFamilyShoppingDelete,
+  handleFamilyShoppingList,
+  handleFamilyShoppingUpdate
+} from "./handlers/familyShopping";
 import {
   handleFamilyTodoCreate,
   handleFamilyTodoDelete,
@@ -205,6 +212,11 @@ export const handler = async (request: Request): Promise<Response> => {
     return withCors(await handleFamilyCreate(request));
   }
 
+  const familyDetailMatch = pathname.match(/^\/families\/([^/]+)$/);
+  if (request.method === "GET" && familyDetailMatch) {
+    return withCors(await handleFamilyDetail(familyDetailMatch[1]));
+  }
+
   const familyJoinMatch = pathname.match(/^\/families\/([^/]+)\/join$/);
   if (request.method === "POST" && familyJoinMatch) {
     return withCors(await handleFamilyJoin(request, familyJoinMatch[1]));
@@ -235,6 +247,20 @@ export const handler = async (request: Request): Promise<Response> => {
     if (request.method === "POST") {
       return withCors(
         await handleFamilyMealCreate(request, familyMealsMatch[1])
+      );
+    }
+  }
+
+  const familyShoppingMatch = pathname.match(
+    /^\/families\/([^/]+)\/shopping-items$/
+  );
+  if (familyShoppingMatch) {
+    if (request.method === "GET") {
+      return withCors(await handleFamilyShoppingList(familyShoppingMatch[1]));
+    }
+    if (request.method === "POST") {
+      return withCors(
+        await handleFamilyShoppingCreate(request, familyShoppingMatch[1])
       );
     }
   }
@@ -310,6 +336,29 @@ export const handler = async (request: Request): Promise<Response> => {
     if (request.method === "DELETE") {
       return withCors(
         await handleFamilyMealDelete(familyMealMatch[1], familyMealMatch[2])
+      );
+    }
+  }
+
+  const familyShoppingItemMatch = pathname.match(
+    /^\/families\/([^/]+)\/shopping-items\/([^/]+)$/
+  );
+  if (familyShoppingItemMatch) {
+    if (request.method === "PATCH") {
+      return withCors(
+        await handleFamilyShoppingUpdate(
+          request,
+          familyShoppingItemMatch[1],
+          familyShoppingItemMatch[2]
+        )
+      );
+    }
+    if (request.method === "DELETE") {
+      return withCors(
+        await handleFamilyShoppingDelete(
+          familyShoppingItemMatch[1],
+          familyShoppingItemMatch[2]
+        )
       );
     }
   }
