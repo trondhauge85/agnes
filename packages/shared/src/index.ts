@@ -22,3 +22,4 @@ export {
 } from "./logging";
 
 export * from "./apiErrors";
+export * from "./communications/telegram";

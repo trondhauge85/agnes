@@ -433,7 +433,7 @@ export type CalendarEventListFilters = {
   limit?: number;
 };
 
-export type CommunicationChannel = "sms" | "whatsapp" | "email";
+export type CommunicationChannel = "sms" | "whatsapp" | "email" | "telegram";
 
 export type CommunicationStatus = "pending" | "sent" | "failed";
 
