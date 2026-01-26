@@ -10,15 +10,24 @@ import type {
 
 const DEFAULT_SCOPES = [
   "openid",
-  "email",
-  "profile",
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
   "https://www.googleapis.com/auth/calendar"
 ];
+
+const REQUIRED_SCOPES = ["https://www.googleapis.com/auth/calendar"];
 
 export class GoogleCalendarConfigError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "GoogleCalendarConfigError";
+  }
+}
+
+export class GoogleCalendarPermissionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GoogleCalendarPermissionError";
   }
 }
 
@@ -306,6 +315,14 @@ export const exchangeGoogleAuthorizationCode = async (
   const scopes = tokens.scope
     ? tokens.scope.split(" ").filter((scope) => scope)
     : DEFAULT_SCOPES;
+  const missingScopes = REQUIRED_SCOPES.filter(
+    (scope) => !scopes.includes(scope)
+  );
+  if (missingScopes.length > 0) {
+    throw new GoogleCalendarPermissionError(
+      "Google Calendar permissions are missing. Reconnect and grant calendar access."
+    );
+  }
 
   return {
     connection: {

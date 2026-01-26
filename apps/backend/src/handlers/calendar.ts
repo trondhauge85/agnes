@@ -19,6 +19,7 @@ import {
 } from "../data/calendar";
 import {
   GoogleCalendarConfigError,
+  GoogleCalendarPermissionError,
   createGoogleAuthorizationUrl,
   createGoogleCalendar,
   createGoogleEvent,
@@ -830,6 +831,14 @@ const createCalendarErrorResponse = (error: unknown): Response => {
       message: error.message,
       messageKey: "errors.calendar.configuration",
       status: 500
+    });
+  }
+  if (error instanceof GoogleCalendarPermissionError) {
+    return createErrorResponse({
+      code: "forbidden",
+      message: error.message,
+      messageKey: "errors.calendar.permission_required",
+      status: 403
     });
   }
 
