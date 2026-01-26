@@ -3,6 +3,7 @@ export * from "./context/contextStore";
 export * from "./context/retriever";
 export * from "./llmService";
 export * from "./mcp";
+export * from "./providers/geminiProvider";
 export * from "./providers/nullProvider";
 export * from "./prompts/promptRegistry";
 export * from "./prompts/actionableExtractionPrompt";
