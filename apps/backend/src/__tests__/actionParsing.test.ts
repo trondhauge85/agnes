@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import type { LlmProvider } from "../llm";
+import type { LlmProvider, LlmRequest } from "../llm";
 import { createActionParsingLlmService } from "../llm/actionParsingLlm";
 import { parseActionableItems } from "../services/actionParsing";
 
@@ -65,6 +65,42 @@ describe("parseActionableItems", () => {
           text: "Schedule a dentist appointment."
         }),
       { message: "LLM response was not valid JSON." }
+    );
+  });
+});
+
+describe("appointment scheduling skill", () => {
+  it("registers the appointment scheduling skill with a structured schema", async () => {
+    let capturedRequest: LlmRequest | undefined;
+    const provider: LlmProvider = {
+      name: "test",
+      generate: async (request) => {
+        capturedRequest = request;
+        return {
+          message: {
+            role: "assistant",
+            content: JSON.stringify({ appointments: [] })
+          }
+        };
+      }
+    };
+
+    const llmService = createActionParsingLlmService(provider);
+
+    await llmService.runTask({
+      skillName: "schedule_appointment",
+      input: {
+        userMessage: "Book a haircut next Friday morning.",
+        timezone: "America/New_York",
+        locale: "en-US"
+      }
+    });
+
+    assert.ok(capturedRequest);
+    assert.equal(capturedRequest?.responseSchema?.type, "object");
+    assert.ok(
+      (capturedRequest?.responseSchema?.properties as Record<string, unknown>)
+        ?.appointments
     );
   });
 });
