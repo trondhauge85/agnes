@@ -13,6 +13,7 @@
   "dependencies": {
     "@agnes/shared": "workspace:*",
     "better-sqlite3": "^11.6.0",
+    "dotenv": "^16.4.5",
     "pg": "^8.13.1",
     "googleapis": "^140.0.0"
   },
