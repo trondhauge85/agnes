@@ -19,6 +19,17 @@ type CalendarSelectionRow = {
   updated_at: string;
 };
 
+type CalendarConnectionRow = {
+  provider: CalendarProvider;
+  status: CalendarConnection["status"];
+  access_token: string | null;
+  refresh_token: string | null;
+  scopes: string;
+  connected_at: string;
+  user_email: string | null;
+  updated_at: string;
+};
+
 const escapeLiteral = (value: string): string => `'${value.replace(/'/g, "''")}'`;
 
 const getAdapter = async (
@@ -62,14 +73,87 @@ const getEventStore = (calendarId: string): Map<string, CalendarEvent> => {
 
 export const connectCalendarProvider = (
   provider: CalendarProvider,
-  connection: CalendarConnection
-): void => {
+  connection: CalendarConnection,
+  adapter?: DatabaseAdapter
+): Promise<void> => {
   calendarConnections.set(provider, connection);
+  const now = new Date().toISOString();
+  return getAdapter(adapter).then((db) =>
+    db.execute(
+      `INSERT INTO calendar_connections (
+        provider,
+        status,
+        access_token,
+        refresh_token,
+        scopes,
+        connected_at,
+        user_email,
+        updated_at
+      ) VALUES (
+        ${escapeLiteral(provider)},
+        ${escapeLiteral(connection.status)},
+        ${connection.accessToken ? escapeLiteral(connection.accessToken) : "NULL"},
+        ${connection.refreshToken ? escapeLiteral(connection.refreshToken) : "NULL"},
+        ${escapeLiteral(JSON.stringify(connection.scopes))},
+        ${escapeLiteral(connection.connectedAt)},
+        ${connection.userEmail ? escapeLiteral(connection.userEmail) : "NULL"},
+        ${escapeLiteral(now)}
+      )
+      ON CONFLICT(provider) DO UPDATE SET
+        status = excluded.status,
+        access_token = excluded.access_token,
+        refresh_token = excluded.refresh_token,
+        scopes = excluded.scopes,
+        connected_at = excluded.connected_at,
+        user_email = excluded.user_email,
+        updated_at = excluded.updated_at`
+    )
+  );
 };
 
 export const getCalendarConnection = (
-  provider: CalendarProvider
-): CalendarConnection | null => calendarConnections.get(provider) ?? null;
+  provider: CalendarProvider,
+  adapter?: DatabaseAdapter
+): Promise<CalendarConnection | null> => {
+  const cached = calendarConnections.get(provider);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+
+  return getAdapter(adapter).then(async (db) => {
+    const rows = await db.query<CalendarConnectionRow>(
+      `SELECT provider, status, access_token, refresh_token, scopes, connected_at, user_email, updated_at
+       FROM calendar_connections
+       WHERE provider = ${escapeLiteral(provider)}
+       LIMIT 1`
+    );
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+    const scopes = (() => {
+      try {
+        const parsed = JSON.parse(row.scopes);
+        return Array.isArray(parsed)
+          ? parsed.filter((scope): scope is string => typeof scope === "string")
+          : [];
+      } catch {
+        return [];
+      }
+    })();
+    const connection: CalendarConnection = {
+      provider: row.provider,
+      status: row.status,
+      accessToken: row.access_token ?? undefined,
+      refreshToken: row.refresh_token ?? undefined,
+      scopes,
+      connectedAt: row.connected_at,
+      userEmail: row.user_email ?? undefined
+    };
+    calendarConnections.set(provider, connection);
+    return connection;
+  });
+};
 
 export const saveCalendar = (
   provider: CalendarProvider,

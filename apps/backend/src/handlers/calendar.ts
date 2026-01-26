@@ -105,9 +105,9 @@ const getCalendarIntegration = (
   provider: CalendarProvider
 ): CalendarIntegration => calendarIntegrations[provider];
 
-const ensureConnected = (
+const ensureConnected = async (
   provider: CalendarProvider
-): CalendarConnection | null => getCalendarConnection(provider);
+): Promise<CalendarConnection | null> => getCalendarConnection(provider);
 
 const ensureSelectedCalendar = async (
   provider: CalendarProvider,
@@ -329,7 +329,7 @@ export const handleCalendarSetup = async (
       body.authorizationCode,
       body.redirectUri
     );
-    connectCalendarProvider(provider, connection);
+    await connectCalendarProvider(provider, connection);
 
     return createJsonResponse({
       status: "connected",
@@ -368,7 +368,7 @@ export const handleCalendarList = async (
     });
   }
 
-  const connection = ensureConnected(provider);
+  const connection = await ensureConnected(provider);
   if (!connection) {
     return createErrorResponse({
       code: "conflict",
@@ -428,7 +428,7 @@ export const handleCalendarSelect = async (
     });
   }
 
-  const connection = ensureConnected(provider);
+  const connection = await ensureConnected(provider);
   if (!connection) {
     return createErrorResponse({
       code: "conflict",
@@ -515,7 +515,7 @@ export const handleCalendarEventCreate = async (
     });
   }
 
-  const connection = ensureConnected(provider);
+  const connection = await ensureConnected(provider);
   if (!connection) {
     return createErrorResponse({
       code: "conflict",
@@ -620,7 +620,7 @@ export const handleCalendarEventUpdate = async (
     });
   }
 
-  const connection = ensureConnected(provider);
+  const connection = await ensureConnected(provider);
   if (!connection) {
     return createErrorResponse({
       code: "conflict",
@@ -700,7 +700,7 @@ export const handleCalendarEventDelete = async (
     });
   }
 
-  const connection = ensureConnected(provider);
+  const connection = await ensureConnected(provider);
   if (!connection) {
     return createErrorResponse({
       code: "conflict",
@@ -758,7 +758,7 @@ export const handleCalendarEventList = async (
     });
   }
 
-  const connection = ensureConnected(provider);
+  const connection = await ensureConnected(provider);
   if (!connection) {
     return createErrorResponse({
       code: "conflict",
