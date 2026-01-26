@@ -159,6 +159,16 @@ Provide the following environment variables to enable the integration:
 - `BREVO_EMAIL_SENDER_NAME` (optional): friendly sender name.
 - `BREVO_EMAIL_SUBJECT` (optional): subject line for auth emails.
 
+## Gemini action parser configuration
+
+The action parsing endpoint can call Google Gemini to extract todos, meals, and
+events. Provide the following environment variables to enable Gemini:
+
+- `GEMINI_API_KEY`: Google AI Studio API key.
+- `GEMINI_MODEL` (optional): Gemini model ID (default `gemini-1.5-flash`).
+- `GEMINI_API_BASE_URL` (optional): override the API base URL (default
+  `https://generativelanguage.googleapis.com/v1beta`).
+
 ## Bruno collection
 
 The Bruno collection lives in `apps/backend/bruno` and mirrors the handler

@@ -1,6 +1,6 @@
 import type { LlmService } from "../llm";
 import type { ActionParseFile, ActionParseInput } from "../services/actionParsing";
-import { NullLlmProvider } from "../llm";
+import { createGeminiProvider, NullLlmProvider } from "../llm";
 import { createActionParsingLlmService } from "../llm/actionParsingLlm";
 import { parseActionableItems } from "../services/actionParsing";
 import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
@@ -134,5 +134,13 @@ export const buildActionParseHandler = (llmService: LlmService) =>
   };
 
 export const handleActionParse = buildActionParseHandler(
-  createActionParsingLlmService(new NullLlmProvider())
+  createActionParsingLlmService(
+    process.env.GEMINI_API_KEY
+      ? createGeminiProvider({
+          apiKey: process.env.GEMINI_API_KEY,
+          model: process.env.GEMINI_MODEL,
+          apiBaseUrl: process.env.GEMINI_API_BASE_URL
+        })
+      : new NullLlmProvider()
+  )
 );
