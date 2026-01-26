@@ -1,7 +1,34 @@
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createServer } from "node:http";
 import { Readable } from "node:stream";
 import { handler } from "../router";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const findEnvPath = (): string | null => {
+  const candidates = [process.cwd(), __dirname];
+  for (const start of candidates) {
+    let current = start;
+    while (true) {
+      const candidate = resolve(current, ".env");
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+      const parent = resolve(current, "..");
+      if (parent === current) {
+        break;
+      }
+      current = parent;
+    }
+  }
+  return null;
+};
+
+const envPath = findEnvPath();
+loadEnv(envPath ? { path: envPath } : undefined);
 
 const port = Number(process.env.PORT ?? 3011);
 
