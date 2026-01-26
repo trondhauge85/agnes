@@ -4,7 +4,6 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "node:http";
 import { Readable } from "node:stream";
-import { handler } from "../router";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -29,6 +28,8 @@ const findEnvPath = (): string | null => {
 
 const envPath = findEnvPath();
 loadEnv(envPath ? { path: envPath } : undefined);
+
+const { handler } = await import("../router");
 
 const port = Number(process.env.PORT ?? 3011);
 
