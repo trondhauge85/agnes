@@ -6,3 +6,4 @@ export {
 } from "./brevoProvider";
 export { createDefaultMessageService } from "./messageServiceFactory";
 export { createWhatsAppProvider, WhatsAppConfigError } from "./whatsappProvider";
+export { createTelegramProvider } from "./telegramProvider";
