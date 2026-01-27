@@ -3,6 +3,7 @@ import { listFamilies, findFamily } from "../../data/families";
 import type { LlmService } from "../../llm";
 import { createDefaultMessageService } from "../../communications";
 import { createMessageService } from "../../communications/messageService";
+import { createLogger } from "@agnes/shared";
 import { createFamilySummaryDataFetcher } from "./summaryData";
 import {
   createDailySummaryPeriod,
@@ -22,6 +23,7 @@ type SummaryWorkerDependencies = {
 };
 
 const formatDateTime = (value: string, locale: string): string => {
+const logger = createLogger("worker.summary");
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
@@ -98,22 +100,83 @@ export const createSummaryWorker = (deps: SummaryWorkerDependencies) => {
     family: Family,
     period: SummaryPeriod
   ): Promise<void> => {
-    const data = await fetchSummaryData(family.id, period);
-    const input = buildSummaryInput(family, period, data);
-    const result = await llmService.runTask({
-      skillName: "family_summary_sms",
-      input
+    const periodContext = {
+      periodLabel: period.label,
+      periodStart: period.start.toISOString(),
+      periodEnd: period.end.toISOString()
+    };
+
+    logger.info("summary.run.start", {
+      context: {
+        familyId: family.id,
+        familyName: family.name,
+        ...periodContext
+      }
     });
-    const summaryText = result.response.message.content.trim();
-    const recipients = getSmsRecipients(family);
-    if (recipients.length === 0 || !summaryText) {
-      return;
+
+    try {
+      const data = await fetchSummaryData(family.id, period);
+      logger.debug("summary.data.fetched", {
+        context: { familyId: family.id, ...periodContext },
+        data: {
+          events: data.events.length,
+          todos: data.todos.length,
+          meals: data.meals.length,
+          shoppingItems: data.shoppingList.length
+        }
+      });
+
+      const input = buildSummaryInput(family, period, data);
+      const result = await llmService.runTask({
+        skillName: "family_summary_sms",
+        input
+      });
+      const summaryText = result.response.message.content.trim();
+      const recipients = getSmsRecipients(family);
+
+      logger.info("summary.llm.completed", {
+        context: { familyId: family.id, ...periodContext },
+        data: {
+          summaryLength: summaryText.length,
+          recipientCount: recipients.length
+        }
+      });
+
+      if (recipients.length === 0) {
+        logger.warn("summary.recipients.empty", {
+          context: { familyId: family.id, ...periodContext }
+        });
+        return;
+      }
+
+      if (!summaryText) {
+        logger.warn("summary.text.empty", {
+          context: { familyId: family.id, ...periodContext }
+        });
+        return;
+      }
+
+      const idempotencyKey = buildIdempotencyKey(family.id, period);
+      await messageService.sendSmsGroup({
+        to: recipients,
+        message: summaryText,
+        idempotencyKey
+      });
+
+      logger.info("summary.sms.sent", {
+        context: { familyId: family.id, ...periodContext },
+        data: {
+          recipientCount: recipients.length,
+          idempotencyKey
+        }
+      });
+    } catch (error) {
+      logger.error("summary.run.failed", {
+        context: { familyId: family.id, ...periodContext },
+        error
+      });
+      throw error;
     }
-    await messageService.sendSmsGroup({
-      to: recipients,
-      message: summaryText,
-      idempotencyKey: buildIdempotencyKey(family.id, period)
-    });
   };
 
   const runSummaryForFamilyId = async (
@@ -122,6 +185,9 @@ export const createSummaryWorker = (deps: SummaryWorkerDependencies) => {
   ): Promise<void> => {
     const family = await findFamilyFn(familyId);
     if (!family) {
+      logger.warn("summary.family.not_found", {
+        context: { familyId, periodLabel: period.label }
+      });
       return;
     }
     await runSummaryForFamily(family, period);
@@ -132,9 +198,25 @@ export const createSummaryWorker = (deps: SummaryWorkerDependencies) => {
   ): Promise<void> => {
     const period = periodBuilder(now());
     const families = await listFamiliesFn();
+    logger.info("summary.batch.start", {
+      context: {
+        periodLabel: period.label,
+        periodStart: period.start.toISOString(),
+        periodEnd: period.end.toISOString()
+      },
+      data: { familyCount: families.length }
+    });
     for (const family of families) {
       await runSummaryForFamily(family, period);
     }
+    logger.info("summary.batch.complete", {
+      context: {
+        periodLabel: period.label,
+        periodStart: period.start.toISOString(),
+        periodEnd: period.end.toISOString()
+      },
+      data: { familyCount: families.length }
+    });
   };
 
   const runWeeklySummaries = async (): Promise<void> =>

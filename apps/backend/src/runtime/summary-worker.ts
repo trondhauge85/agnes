@@ -2,6 +2,7 @@ import { config as loadEnv } from "dotenv";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { configureLogging, createLogger } from "@agnes/shared";
 import { createGeminiProvider, NullLlmProvider } from "../llm";
 import { createFamilySummaryLlmService } from "../workers/summary/summaryLlm";
 import { createSummaryWorker } from "../workers/summary/summaryWorker";
@@ -29,6 +30,9 @@ const findEnvPath = (): string | null => {
 
 const envPath = findEnvPath();
 loadEnv(envPath ? { path: envPath } : undefined);
+
+configureLogging({ level: process.env.LOG_LEVEL ?? "info", context: { service: "summary-worker" } });
+const logger = createLogger("summary-worker.runtime");
 
 const usage = `Usage: pnpm --filter @agnes/backend summary:worker <daily|weekly> [options]
 
@@ -85,6 +89,10 @@ const parseArgs = (argv: string[]): { mode: SummaryMode; familyId?: string } => 
 const main = async (): Promise<void> => {
   const { mode, familyId } = parseArgs(process.argv.slice(2));
 
+  logger.info("summary.worker.start", {
+    context: { mode, familyId }
+  });
+
   const provider = process.env.GEMINI_API_KEY
     ? createGeminiProvider({
         apiKey: process.env.GEMINI_API_KEY,
@@ -102,6 +110,9 @@ const main = async (): Promise<void> => {
     } else {
       await worker.runDailySummaries();
     }
+    logger.info("summary.worker.complete", {
+      context: { mode, familyId }
+    });
     return;
   }
 
@@ -110,6 +121,10 @@ const main = async (): Promise<void> => {
   } else {
     await worker.runWeeklySummaries();
   }
+
+  logger.info("summary.worker.complete", {
+    context: { mode, familyId }
+  });
 };
 
 try {
