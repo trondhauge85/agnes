@@ -199,10 +199,10 @@ export const parseActionableItems = async (
         const startRecord = asRecord(record.start);
         const endRecord = asRecord(record.end);
         const startDateTime = normalizeDateTime(startRecord.dateTime);
-        const endDateTime = normalizeDateTime(endRecord.dateTime);
-        if (!startDateTime || !endDateTime) {
+        if (!startDateTime) {
           return null;
         }
+        const endDateTime = normalizeDateTime(endRecord.dateTime);
 
         const locationRecord = asRecord(record.location);
         return {
@@ -213,10 +213,12 @@ export const parseActionableItems = async (
             dateTime: startDateTime,
             timeZone: normalizeOptionalString(startRecord.timeZone)
           },
-          end: {
-            dateTime: endDateTime,
-            timeZone: normalizeOptionalString(endRecord.timeZone)
-          },
+          end: endDateTime
+            ? {
+                dateTime: endDateTime,
+                timeZone: normalizeOptionalString(endRecord.timeZone)
+              }
+            : undefined,
           location: record.location
             ? {
                 name: normalizeOptionalString(locationRecord.name),
