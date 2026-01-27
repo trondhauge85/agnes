@@ -1,4 +1,5 @@
 import type { SmsProvider, SmsProviderResult } from "../types";
+import { createLogger } from "@agnes/shared";
 
 type GatewayApiConfig = {
   apiKey: string;
@@ -15,6 +16,14 @@ type GatewayApiSmsResponse = {
 };
 
 const DEFAULT_GATEWAY_API_BASE_URL = "https://gatewayapi.com";
+const logger = createLogger("communications.sms.gatewayapi");
+
+const maskRecipient = (recipient: string): string => {
+  if (recipient.length <= 4) {
+    return recipient;
+  }
+  return `${"*".repeat(Math.max(recipient.length - 4, 0))}${recipient.slice(-4)}`;
+};
 
 const buildGatewayApiHeaders = (
   config: GatewayApiConfig,
@@ -78,6 +87,15 @@ const sendGatewayApiSms = async (
   message: string,
   idempotencyKey?: string
 ): Promise<SmsProviderResult> => {
+  logger.info("sms.gatewayapi.requested", {
+    data: {
+      recipientCount: recipients.length,
+      recipients: recipients.map(maskRecipient),
+      idempotencyKey,
+      messageLength: message.length,
+      apiBaseUrl: config.apiBaseUrl ?? DEFAULT_GATEWAY_API_BASE_URL
+    }
+  });
   const response = await fetch(
     `${config.apiBaseUrl ?? DEFAULT_GATEWAY_API_BASE_URL}/rest/mtsms`,
     {
@@ -92,7 +110,16 @@ const sendGatewayApiSms = async (
   );
 
   const payload = await parseGatewayApiResponse(response);
-  return resolveProviderResult(response, payload);
+  const result = resolveProviderResult(response, payload);
+  logger.info("sms.gatewayapi.responded", {
+    data: {
+      ok: response.ok,
+      status: response.status,
+      providerMessageId: result.providerMessageId,
+      error: result.error
+    }
+  });
+  return result;
 };
 
 export const createGatewayApiSmsProvider = (config: GatewayApiConfig): SmsProvider => ({
