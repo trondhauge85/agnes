@@ -22,6 +22,8 @@ type SummaryWorkerDependencies = {
   now?: () => Date;
 };
 
+const logger = createLogger("worker.summary");
+
 const formatDateTime = (value: string, locale: string): string => {
 const logger = createLogger("worker.summary");
   const date = new Date(value);
@@ -45,7 +47,7 @@ const buildSummaryInput = (
   period: SummaryPeriod,
   data: Awaited<ReturnType<ReturnType<typeof createFamilySummaryDataFetcher>>>
 ): Record<string, string> => {
-  const locale = family.preferredLanguage || "en-US";
+  const locale = family.preferredLanguage || "nb-NO";
   return {
     familyName: family.name,
     periodLabel: period.label,
