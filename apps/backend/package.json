@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/runtime/node.ts",
     "dev:worker": "wrangler dev",
+    "dev:worker:node": "tsx src/runtime/worker-node.ts",
     "deploy:worker": "wrangler deploy",
     "build": "echo 'build pipeline to be added'",
     "typecheck": "tsc -p tsconfig.json",
