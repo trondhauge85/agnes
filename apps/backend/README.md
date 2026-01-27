@@ -32,6 +32,12 @@ pnpm --filter @agnes/backend install
 pnpm --filter @agnes/backend dev:worker
 ```
 
+To run the worker with a standalone Node script (no Wrangler):
+
+```bash
+pnpm --filter @agnes/backend dev:worker:node
+```
+
 To deploy to Cloudflare Workers:
 
 ```bash
