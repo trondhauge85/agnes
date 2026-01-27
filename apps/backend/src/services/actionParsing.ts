@@ -61,6 +61,8 @@ export type ActionParseResult = {
   events: ActionParseEvent[];
 };
 
+const DEFAULT_EVENT_DURATION_MINUTES = 60;
+
 const formatDateForTimeZone = (date: Date, timeZone: string): string =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -227,10 +229,8 @@ export const parseActionableItems = async (
         const startRecord = asRecord(record.start);
         const endRecord = asRecord(record.end);
         const startDateTime = normalizeDateTime(startRecord.dateTime);
-        const endDateTime = normalizeDateTime(endRecord.dateTime);
         if (
           !startDateTime ||
-          !endDateTime ||
           !isOnOrAfterToday(startDateTime, timeZone, today)
         ) {
           return null;
@@ -241,7 +241,6 @@ export const parseActionableItems = async (
         if (!endDateTime) {
           return null;
         }
-        const endDateTime = normalizeDateTime(endRecord.dateTime);
 
         const locationRecord = asRecord(record.location);
         return {
