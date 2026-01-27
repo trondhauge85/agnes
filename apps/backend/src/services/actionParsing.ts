@@ -61,6 +61,8 @@ export type ActionParseResult = {
   events: ActionParseEvent[];
 };
 
+const DEFAULT_EVENT_DURATION_MINUTES = 60;
+
 const normalizeConfidence = (value: unknown): number | null => {
   if (typeof value !== "number" || Number.isNaN(value)) {
     return null;
@@ -85,6 +87,15 @@ const normalizeDateTime = (value: unknown): string | undefined => {
   if (Number.isNaN(parsed.getTime())) {
     return undefined;
   }
+  return parsed.toISOString();
+};
+
+const addMinutes = (value: string, minutes: number): string | undefined => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+  parsed.setMinutes(parsed.getMinutes() + minutes);
   return parsed.toISOString();
 };
 
@@ -202,6 +213,12 @@ export const parseActionableItems = async (
         if (!startDateTime) {
           return null;
         }
+        const explicitEndDateTime = normalizeDateTime(endRecord.dateTime);
+        const endDateTime =
+          explicitEndDateTime ?? addMinutes(startDateTime, DEFAULT_EVENT_DURATION_MINUTES);
+        if (!endDateTime) {
+          return null;
+        }
         const endDateTime = normalizeDateTime(endRecord.dateTime);
 
         const locationRecord = asRecord(record.location);
@@ -213,12 +230,12 @@ export const parseActionableItems = async (
             dateTime: startDateTime,
             timeZone: normalizeOptionalString(startRecord.timeZone)
           },
-          end: endDateTime
-            ? {
-                dateTime: endDateTime,
-                timeZone: normalizeOptionalString(endRecord.timeZone)
-              }
-            : undefined,
+          end: {
+            dateTime: endDateTime,
+            timeZone:
+              normalizeOptionalString(endRecord.timeZone) ??
+              normalizeOptionalString(startRecord.timeZone)
+          },
           location: record.location
             ? {
                 name: normalizeOptionalString(locationRecord.name),
