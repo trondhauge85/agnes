@@ -6,6 +6,7 @@ type FamilyRow = {
   id: string;
   name: string;
   picture_url: string;
+  preferred_language: string;
   created_at: string;
   metadata_interests: string;
   metadata_goals: string;
@@ -49,6 +50,7 @@ const serializeFamilyRow = (
   id: row.id,
   name: row.name,
   pictureUrl: row.picture_url,
+  preferredLanguage: row.preferred_language,
   createdAt: row.created_at,
   metadata: {
     interests: parseJsonArray(row.metadata_interests),
@@ -69,7 +71,7 @@ export const findFamily = async (
 ): Promise<Family | null> => {
   const db = await getAdapter(adapter);
   const rows = await db.query<FamilyRow>(
-    `SELECT id, name, picture_url, created_at, metadata_interests, metadata_goals
+    `SELECT id, name, picture_url, preferred_language, created_at, metadata_interests, metadata_goals
      FROM families
      WHERE id = ${escapeLiteral(familyId)}
      LIMIT 1`
@@ -111,6 +113,7 @@ export const saveFamily = async (
       id,
       name,
       picture_url,
+      preferred_language,
       created_at,
       metadata_interests,
       metadata_goals
@@ -118,6 +121,7 @@ export const saveFamily = async (
       ${escapeLiteral(family.id)},
       ${escapeLiteral(family.name)},
       ${escapeLiteral(family.pictureUrl)},
+      ${escapeLiteral(family.preferredLanguage)},
       ${escapeLiteral(family.createdAt)},
       ${escapeLiteral(metadataInterests)},
       ${escapeLiteral(metadataGoals)}
@@ -125,6 +129,7 @@ export const saveFamily = async (
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       picture_url = excluded.picture_url,
+      preferred_language = excluded.preferred_language,
       metadata_interests = excluded.metadata_interests,
       metadata_goals = excluded.metadata_goals`
   );
@@ -224,7 +229,7 @@ export const listFamilies = async (
 ): Promise<Family[]> => {
   const db = await getAdapter(adapter);
   const familyRows = await db.query<FamilyRow>(
-    "SELECT id, name, picture_url, created_at, metadata_interests, metadata_goals FROM families"
+    "SELECT id, name, picture_url, preferred_language, created_at, metadata_interests, metadata_goals FROM families"
   );
   if (familyRows.length === 0) {
     return [];

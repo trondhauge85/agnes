@@ -115,7 +115,8 @@ export const buildActionParseHandler = (llmService: LlmService) =>
         text,
         files,
         timezone: normalizeString(body.timezone ?? "") || undefined,
-        locale: normalizeString(body.locale ?? "") || undefined
+        locale: normalizeString(body.locale ?? "") || undefined,
+        language: normalizeString(body.language ?? "") || undefined
       });
 
       return createJsonResponse({

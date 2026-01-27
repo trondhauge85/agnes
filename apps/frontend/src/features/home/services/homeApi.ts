@@ -138,6 +138,7 @@ export const parseActionableItems = async (payload: {
   files?: ActionParseFile[];
   timezone?: string;
   locale?: string;
+  language?: string;
 }): Promise<ActionParseResponse> =>
   apiRequest<ActionParseResponse>("/actions/parse", {
     method: "POST",

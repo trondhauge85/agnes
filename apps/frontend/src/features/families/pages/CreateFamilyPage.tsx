@@ -173,6 +173,7 @@ export const CreateFamilyPage = () => {
       const response = await createFamily({
         name: familyName,
         pictureUrl: photoUrl ?? placeholderSvg,
+        preferredLanguage: navigator.language,
         creator: {
           userId: profileId,
           displayName: profileName

@@ -6,6 +6,7 @@ export type FamilyJoinResponse = {
     id: string;
     name: string;
     pictureUrl: string;
+    preferredLanguage?: string;
     createdAt: string;
     metadata: {
       interests: string[];
@@ -44,6 +45,7 @@ export type FamilyDetail = {
   id: string;
   name: string;
   pictureUrl: string;
+  preferredLanguage?: string;
   createdAt: string;
   metadata: {
     interests: string[];

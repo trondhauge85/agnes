@@ -187,6 +187,10 @@ export const HomePage = () => {
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmittingParse, setIsSubmittingParse] = useState(false);
   const trackingNumbers = useMemo(() => extractTrackingNumbers(note), [note]);
+  const selectedFamilyInfo = useMemo(
+    () => families.find((family) => family.id === selectedFamily) ?? null,
+    [families, selectedFamily]
+  );
 
   const handleFileSelection = (files: FileList | null) => {
     if (!files) {
@@ -380,7 +384,8 @@ export const HomePage = () => {
         text: note.trim() || undefined,
         files: files.length > 0 ? files : undefined,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        locale: navigator.language
+        locale: selectedFamilyInfo?.preferredLanguage || navigator.language,
+        language: selectedFamilyInfo?.preferredLanguage || navigator.language
       });
 
       setParseResults(response.results);
