@@ -104,6 +104,15 @@ const normalizeDateTime = (value: unknown): string | undefined => {
   return parsed.toISOString();
 };
 
+const addMinutes = (value: string, minutes: number): string | undefined => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+  parsed.setMinutes(parsed.getMinutes() + minutes);
+  return parsed.toISOString();
+};
+
 const normalizeSourceText = (input: ActionParseInput): string => {
   const lines: string[] = [];
   const text = normalizeString(input.text ?? "");
@@ -226,6 +235,13 @@ export const parseActionableItems = async (
         ) {
           return null;
         }
+        const explicitEndDateTime = normalizeDateTime(endRecord.dateTime);
+        const endDateTime =
+          explicitEndDateTime ?? addMinutes(startDateTime, DEFAULT_EVENT_DURATION_MINUTES);
+        if (!endDateTime) {
+          return null;
+        }
+        const endDateTime = normalizeDateTime(endRecord.dateTime);
 
         const locationRecord = asRecord(record.location);
         return {
@@ -238,7 +254,9 @@ export const parseActionableItems = async (
           },
           end: {
             dateTime: endDateTime,
-            timeZone: normalizeOptionalString(endRecord.timeZone)
+            timeZone:
+              normalizeOptionalString(endRecord.timeZone) ??
+              normalizeOptionalString(startRecord.timeZone)
           },
           location: record.location
             ? {
