@@ -50,6 +50,20 @@ The worker config includes a cron trigger. Update the cron schedule in
 `apps/backend/wrangler.toml` and add the scheduled work in
 `src/scheduled.ts`.
 
+### Summary worker (Node/cron)
+
+The summary worker can run as a standalone Node command, making it suitable for
+cron. It will load `.env` automatically (same behavior as the Node runtime).
+
+```bash
+pnpm --filter @agnes/backend summary:worker daily
+pnpm --filter @agnes/backend summary:worker weekly
+pnpm --filter @agnes/backend summary:worker weekly --family fam_123
+```
+
+Use `GEMINI_API_KEY` (and optional `GEMINI_MODEL`/`GEMINI_API_BASE_URL`) to
+enable the LLM provider; otherwise a null provider is used.
+
 ## Node/k8s runtime
 
 Use the Node runtime adapter to keep deployments portable. Start it locally or
