@@ -36,6 +36,11 @@ describe("parseActionableItems", () => {
             start: { dateTime: "2025-03-10T09:00:00.000Z" },
             end: { dateTime: "2025-03-10T10:00:00.000Z" },
             confidence: 0.9
+          },
+          {
+            title: "Football practice",
+            start: { dateTime: "2025-03-12T18:30:00.000Z" },
+            confidence: 0.88
           }
         ]
       })
@@ -50,9 +55,10 @@ describe("parseActionableItems", () => {
 
     assert.equal(result.todos.length, 1);
     assert.equal(result.meals.length, 1);
-    assert.equal(result.events.length, 1);
+    assert.equal(result.events.length, 2);
     assert.ok(result.todos[0].id);
     assert.equal(result.meals[0].mealType, "dinner");
+    assert.equal(result.events[1].end, undefined);
   });
 
   it("defaults event end time when missing", async () => {

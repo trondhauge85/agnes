@@ -219,6 +219,7 @@ export const parseActionableItems = async (
         if (!endDateTime) {
           return null;
         }
+        const endDateTime = normalizeDateTime(endRecord.dateTime);
 
         const locationRecord = asRecord(record.location);
         return {
