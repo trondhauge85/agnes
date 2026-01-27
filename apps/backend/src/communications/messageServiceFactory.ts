@@ -4,23 +4,28 @@ import {
   createBrevoEmailProvider,
   createBrevoSmsProvider
 } from "./brevoProvider";
+import {
+  createGatewayApiConfigFromEnv,
+  createGatewayApiSmsProvider
+} from "./gatewayApiProvider";
 import { createTelegramProvider } from "./telegramProvider";
 import type { CommunicationChannel, CommunicationProvider } from "../types";
 
 export const createDefaultMessageService = () => {
-  const config = createBrevoConfigFromEnv();
-  if (!config) {
-    return null;
-  }
+  const brevoConfig = createBrevoConfigFromEnv();
+  const gatewayConfig = createGatewayApiConfigFromEnv();
 
   const providers: Partial<Record<CommunicationChannel, CommunicationProvider>> = {};
 
-  if (config.emailSender) {
-    providers.email = createBrevoEmailProvider(config);
+  if (brevoConfig?.emailSender) {
+    providers.email = createBrevoEmailProvider(brevoConfig);
   }
 
-  if (config.smsSender) {
-    const smsProvider = createBrevoSmsProvider(config);
+  if (gatewayConfig?.smsSender) {
+    const smsProvider = createGatewayApiSmsProvider(gatewayConfig);
+    providers.sms = createSmsCommunicationProvider(smsProvider);
+  } else if (brevoConfig?.smsSender) {
+    const smsProvider = createBrevoSmsProvider(brevoConfig);
     providers.sms = createSmsCommunicationProvider(smsProvider);
   }
 
