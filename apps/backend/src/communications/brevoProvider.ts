@@ -5,6 +5,7 @@ import type {
   SmsProvider,
   SmsProviderResult
 } from "../types";
+import { createLogger } from "@agnes/shared";
 
 type BrevoConfig = {
   apiKey: string;
@@ -25,6 +26,8 @@ type BrevoEmailResponse = {
   error?: string;
   message?: string;
 };
+
+const logger = createLogger("communications.brevo");
 
 const buildBrevoHeaders = (apiKey: string, idempotencyKey?: string) => {
   const headers = new Headers({
@@ -73,12 +76,36 @@ const resolveProviderResult = (
   error: response.ok ? undefined : resolveErrorMessage(response, payload)
 });
 
+const logBrevoResponse = (
+  action: string,
+  response: Response,
+  result: CommunicationProviderResult,
+  idempotencyKey?: string
+) => {
+  logger.info(action, {
+    data: {
+      ok: response.ok,
+      status: response.status,
+      providerMessageId: result.providerMessageId,
+      error: result.error,
+      idempotencyKey
+    }
+  });
+};
+
 export const createBrevoSmsProvider = (config: BrevoConfig): SmsProvider => {
   const sendSingleSms = async (
     to: string,
     message: string,
     idempotencyKey?: string
   ): Promise<SmsProviderResult> => {
+    logger.info("sms.brevo.requested", {
+      data: {
+        idempotencyKey,
+        recipient: to.length <= 4 ? to : `${"*".repeat(to.length - 4)}${to.slice(-4)}`,
+        messageLength: message.length
+      }
+    });
     const response = await fetch("https://api.brevo.com/v3/transactionalSMS/sms", {
       method: "POST",
       headers: buildBrevoHeaders(config.apiKey, idempotencyKey),
@@ -89,7 +116,9 @@ export const createBrevoSmsProvider = (config: BrevoConfig): SmsProvider => {
       })
     });
     const payload = await parseBrevoResponse<BrevoSmsResponse>(response);
-    return resolveProviderResult(response, payload);
+    const result = resolveProviderResult(response, payload);
+    logBrevoResponse("sms.brevo.responded", response, result, idempotencyKey);
+    return result;
   };
 
   return {
@@ -125,12 +154,25 @@ export const createBrevoEmailProvider = (config: BrevoConfig): CommunicationProv
       name: recipient.name
     }));
     if (recipients.length === 0) {
+      logger.warn("email.brevo.rejected", {
+        data: {
+          reason: "missing_recipients",
+          idempotencyKey: payload.idempotencyKey
+        }
+      });
       return {
         status: "failed",
         error: "Email payload requires at least one recipient."
       };
     }
 
+    logger.info("email.brevo.requested", {
+      data: {
+        idempotencyKey: payload.idempotencyKey,
+        recipientCount: recipients.length,
+        messageLength: payload.message.length
+      }
+    });
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: buildBrevoHeaders(config.apiKey, payload.idempotencyKey),
@@ -146,7 +188,14 @@ export const createBrevoEmailProvider = (config: BrevoConfig): CommunicationProv
     });
 
     const payloadResponse = await parseBrevoResponse<BrevoEmailResponse>(response);
-    return resolveProviderResult(response, payloadResponse);
+    const result = resolveProviderResult(response, payloadResponse);
+    logBrevoResponse(
+      "email.brevo.responded",
+      response,
+      result,
+      payload.idempotencyKey
+    );
+    return result;
   }
 });
 
