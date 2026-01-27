@@ -55,6 +55,31 @@ describe("parseActionableItems", () => {
     assert.equal(result.meals[0].mealType, "dinner");
   });
 
+  it("defaults event end time when missing", async () => {
+    const provider = buildProvider(
+      JSON.stringify({
+        todos: [],
+        meals: [],
+        events: [
+          {
+            title: "Soccer practice",
+            start: { dateTime: "2025-05-22T18:30:00.000Z" },
+            confidence: 0.8
+          }
+        ]
+      })
+    );
+
+    const llmService = createActionParsingLlmService(provider);
+    const result = await parseActionableItems(llmService, {
+      text: "Soccer practice every Wednesday at 18:30."
+    });
+
+    assert.equal(result.events.length, 1);
+    assert.equal(result.events[0].start?.dateTime, "2025-05-22T18:30:00.000Z");
+    assert.equal(result.events[0].end?.dateTime, "2025-05-22T19:30:00.000Z");
+  });
+
   it("throws when LLM response is invalid JSON", async () => {
     const provider = buildProvider("not-json");
     const llmService = createActionParsingLlmService(provider);

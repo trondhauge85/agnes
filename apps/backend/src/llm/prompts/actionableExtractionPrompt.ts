@@ -15,7 +15,7 @@ export const actionableExtractionPrompt: PromptTemplate = {
       "- meals: array of { title, notes?, mealType?, scheduledFor?, servings?, recipeUrl?, confidence, source? }",
       "- events: array of { title, description?, start?, end?, location?, confidence, source? }",
       "Only include items that are clearly actionable.",
-      "For events, include start and end in ISO 8601 dateTime when both are explicit; otherwise omit the event.",
+      "For events, include start in ISO 8601 dateTime when explicit. Include end when explicit; if end is missing but the event is valid, omit end and we will assume a 1-hour duration.",
       "For scheduledFor, return an ISO 8601 timestamp if a date/time is explicit.",
       "Confidence must be a number between 0 and 1.",
       "Source should be a short snippet that supports the item.",

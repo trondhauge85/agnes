@@ -65,6 +65,7 @@ const trackingPatterns = [
 const MAX_FILES = 5;
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 15 * 1024 * 1024;
+const DEFAULT_EVENT_DURATION_MINUTES = 60;
 
 const extractTrackingNumbers = (value: string) => {
   if (!value) {
@@ -117,6 +118,27 @@ const readFileAsDataUrl = (file: File): Promise<string> =>
     reader.onerror = () => reject(reader.error ?? new Error("Failed to read file."));
     reader.readAsDataURL(file);
   });
+
+const withDefaultEventEnd = (event: ActionParseEvent): ActionParseEvent | null => {
+  if (!event.start?.dateTime) {
+    return null;
+  }
+  if (event.end?.dateTime) {
+    return event;
+  }
+  const parsedStart = new Date(event.start.dateTime);
+  if (Number.isNaN(parsedStart.getTime())) {
+    return null;
+  }
+  parsedStart.setMinutes(parsedStart.getMinutes() + DEFAULT_EVENT_DURATION_MINUTES);
+  return {
+    ...event,
+    end: {
+      dateTime: parsedStart.toISOString(),
+      timeZone: event.end?.timeZone ?? event.start.timeZone,
+    },
+  };
+};
 
 const formatDateTime = (value?: string) => {
   if (!value) {
@@ -389,8 +411,15 @@ export const HomePage = () => {
     const selectedTodos = parseResults.todos.filter((item) => parseSelections[item.id]);
     const selectedMeals = parseResults.meals.filter((item) => parseSelections[item.id]);
     const selectedEvents = parseResults.events.filter((item) => parseSelections[item.id]);
+    const normalizedEvents = selectedEvents
+      .map(withDefaultEventEnd)
+      .filter((event): event is ActionParseEvent => Boolean(event));
 
-    if (selectedTodos.length === 0 && selectedMeals.length === 0 && selectedEvents.length === 0) {
+    if (
+      selectedTodos.length === 0 &&
+      selectedMeals.length === 0 &&
+      normalizedEvents.length === 0
+    ) {
       setParseError({ message: "Select at least one item to add.", messageKey: "errors.parse.none" });
       return;
     }
@@ -433,8 +462,8 @@ export const HomePage = () => {
       }
 
       if (selectedFamily) {
-        selectedEvents.forEach((event) => {
-          if (event.start?.dateTime && event.end?.dateTime) {
+        normalizedEvents.forEach((event) => {
+          if (event.start && event.end) {
             tasks.push(
               createCalendarEvent(
                 {
