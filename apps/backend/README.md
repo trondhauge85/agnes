@@ -179,6 +179,15 @@ Provide the following environment variables to enable the integration:
 - `BREVO_EMAIL_SENDER_NAME` (optional): friendly sender name.
 - `BREVO_EMAIL_SUBJECT` (optional): subject line for auth emails.
 
+## GatewayAPI SMS configuration
+
+The backend can also send SMS through GatewayAPI. Provide the following environment variables to enable the integration:
+
+- `GATEWAYAPI_KEY`: GatewayAPI key.
+- `GATEWAYAPI_SECRET`: GatewayAPI secret.
+- `GATEWAYAPI_SMS_SENDER`: sender ID or phone number for SMS.
+- `GATEWAYAPI_API_BASE_URL` (optional): override the API base URL (default `https://gatewayapi.com`).
+
 ## Gemini action parser configuration
 
 The action parsing endpoint can call Google Gemini to extract todos, meals, and
