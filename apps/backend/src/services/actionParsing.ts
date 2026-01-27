@@ -61,7 +61,21 @@ export type ActionParseResult = {
   events: ActionParseEvent[];
 };
 
-const DEFAULT_EVENT_DURATION_MINUTES = 60;
+const formatDateForTimeZone = (date: Date, timeZone: string): string =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(date);
+
+const isOnOrAfterToday = (dateTime: string, timeZone: string, today: string): boolean => {
+  const parsed = new Date(dateTime);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+  return formatDateForTimeZone(parsed, timeZone) >= today;
+};
 
 const normalizeConfidence = (value: unknown): number | null => {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -136,12 +150,15 @@ export const parseActionableItems = async (
   input: ActionParseInput
 ): Promise<ActionParseResult> => {
   const sourceText = normalizeSourceText(input);
+  const timeZone = input.timezone ?? "UTC";
+  const today = formatDateForTimeZone(new Date(), timeZone);
   const task = await llmService.runTask({
     skillName: "extract_actionable_items",
     input: {
       sourceText,
-      timezone: input.timezone ?? "UTC",
+      timezone: timeZone,
       locale: input.locale ?? "en-US",
+      currentDate: today,
       userMessage: "Extract actionable todos, meals, and events."
     }
   });
@@ -210,7 +227,12 @@ export const parseActionableItems = async (
         const startRecord = asRecord(record.start);
         const endRecord = asRecord(record.end);
         const startDateTime = normalizeDateTime(startRecord.dateTime);
-        if (!startDateTime) {
+        const endDateTime = normalizeDateTime(endRecord.dateTime);
+        if (
+          !startDateTime ||
+          !endDateTime ||
+          !isOnOrAfterToday(startDateTime, timeZone, today)
+        ) {
           return null;
         }
         const explicitEndDateTime = normalizeDateTime(endRecord.dateTime);

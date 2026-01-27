@@ -26,15 +26,15 @@ describe("parseActionableItems", () => {
           {
             title: "Taco night",
             mealType: "dinner",
-            scheduledFor: "2025-02-10T18:00:00.000Z",
+            scheduledFor: "2099-02-10T18:00:00.000Z",
             confidence: 0.7
           }
         ],
         events: [
           {
             title: "Dentist",
-            start: { dateTime: "2025-03-10T09:00:00.000Z" },
-            end: { dateTime: "2025-03-10T10:00:00.000Z" },
+            start: { dateTime: "2099-03-10T09:00:00.000Z" },
+            end: { dateTime: "2099-03-10T10:00:00.000Z" },
             confidence: 0.9
           },
           {
