@@ -21,12 +21,12 @@ type SummaryWorkerDependencies = {
   now?: () => Date;
 };
 
-const formatDateTime = (value: string): string => {
+const formatDateTime = (value: string, locale: string): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -42,31 +42,39 @@ const buildSummaryInput = (
   family: Family,
   period: SummaryPeriod,
   data: Awaited<ReturnType<ReturnType<typeof createFamilySummaryDataFetcher>>>
-): Record<string, string> => ({
-  familyName: family.name,
-  periodLabel: period.label,
-  calendarItems: formatItems(
-    data.events.map((event) => `${event.title} (${formatDateTime(event.start.dateTime)})`)
-  ),
-  todoItems: formatItems(
-    data.todos.map((todo) => `${todo.title}${todo.notes ? ` - ${todo.notes}` : ""}`)
-  ),
-  mealItems: formatItems(
-    data.meals.map((meal) => {
-      const when = meal.scheduledFor ? formatDateTime(meal.scheduledFor) : "TBD";
-      return `${meal.title} (${meal.mealType}) - ${when}`;
-    })
-  ),
-  shoppingItems: formatItems(
-    data.shoppingList.map((item) => {
-      const quantity = item.quantity ? `${item.quantity} ` : "";
-      const unit = item.unit ? `${item.unit} ` : "";
-      const details = item.notes ? ` - ${item.notes}` : "";
-      return `${quantity}${unit}${item.title}${details}`.trim();
-    })
-  ),
-  userMessage: "Summarize the family's upcoming plans and tasks."
-});
+): Record<string, string> => {
+  const locale = family.preferredLanguage || "en-US";
+  return {
+    familyName: family.name,
+    periodLabel: period.label,
+    preferredLanguage: locale,
+    calendarItems: formatItems(
+      data.events.map(
+        (event) => `${event.title} (${formatDateTime(event.start.dateTime, locale)})`
+      )
+    ),
+    todoItems: formatItems(
+      data.todos.map((todo) => `${todo.title}${todo.notes ? ` - ${todo.notes}` : ""}`)
+    ),
+    mealItems: formatItems(
+      data.meals.map((meal) => {
+        const when = meal.scheduledFor
+          ? formatDateTime(meal.scheduledFor, locale)
+          : "TBD";
+        return `${meal.title} (${meal.mealType}) - ${when}`;
+      })
+    ),
+    shoppingItems: formatItems(
+      data.shoppingList.map((item) => {
+        const quantity = item.quantity ? `${item.quantity} ` : "";
+        const unit = item.unit ? `${item.unit} ` : "";
+        const details = item.notes ? ` - ${item.notes}` : "";
+        return `${quantity}${unit}${item.title}${details}`.trim();
+      })
+    ),
+    userMessage: "Summarize the family's upcoming plans and tasks."
+  };
+};
 
 const buildIdempotencyKey = (familyId: string, period: SummaryPeriod): string =>
   `family-summary-${familyId}-${period.start.toISOString().slice(0, 10)}`;

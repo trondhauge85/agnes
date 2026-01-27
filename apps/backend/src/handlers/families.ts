@@ -52,6 +52,8 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
 
   const name = normalizeString(body.name ?? "");
   const pictureUrl = normalizeString(body.pictureUrl ?? "");
+  const preferredLanguage =
+    normalizeString(body.preferredLanguage ?? "") || "en-US";
   const creatorIdRaw = normalizeString(body.creator?.userId ?? "");
   const creatorName = normalizeString(body.creator?.displayName ?? "");
   const creatorEmail = normalizeString(body.creator?.email ?? "");
@@ -98,6 +100,7 @@ export const handleFamilyCreate = async (request: Request): Promise<Response> =>
     id: crypto.randomUUID(),
     name,
     pictureUrl,
+    preferredLanguage,
     createdAt: now,
     metadata,
     members: [

@@ -6,6 +6,7 @@ export const familySummaryPrompt: PromptTemplate = {
   render: ({
     familyName,
     periodLabel,
+    preferredLanguage,
     calendarItems,
     todoItems,
     mealItems,
@@ -14,6 +15,7 @@ export const familySummaryPrompt: PromptTemplate = {
     [
       "You are a friendly family assistant.",
       `Create a short, informal SMS summary for ${familyName} covering ${periodLabel}.`,
+      `Write the summary in ${preferredLanguage || "English"}.`,
       "Use emojis at the start of each line item.",
       "Keep it informative, warm, and concise (under 8 lines).",
       "Return plain text only (no markdown, no JSON).",

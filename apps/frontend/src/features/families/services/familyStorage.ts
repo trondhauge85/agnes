@@ -2,6 +2,7 @@ export type StoredFamily = {
   id: string;
   name: string;
   pictureUrl?: string;
+  preferredLanguage?: string;
 };
 
 const FAMILY_STORAGE_KEY = "agnes_families";

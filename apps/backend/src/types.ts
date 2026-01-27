@@ -64,6 +64,7 @@ export type Family = {
   id: string;
   name: string;
   pictureUrl: string;
+  preferredLanguage: string;
   createdAt: string;
   metadata: FamilyMetadata;
   members: FamilyMember[];
@@ -118,6 +119,7 @@ export type FamilyMeal = {
 export type FamilyCreatePayload = {
   name: string;
   pictureUrl: string;
+  preferredLanguage?: string;
   creator: {
     userId?: string;
     displayName: string;
@@ -191,6 +193,7 @@ export type ActionParseRequestPayload = {
   files?: ActionParseFilePayload[];
   timezone?: string;
   locale?: string;
+  language?: string;
 };
 
 export type ActionParseTodoResult = {

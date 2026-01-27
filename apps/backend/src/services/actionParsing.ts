@@ -12,6 +12,7 @@ export type ActionParseInput = {
   files?: ActionParseFile[];
   timezone?: string;
   locale?: string;
+  language?: string;
 };
 
 export type ActionParseTodo = {
@@ -160,6 +161,7 @@ export const parseActionableItems = async (
       sourceText,
       timezone: timeZone,
       locale: input.locale ?? "en-US",
+      language: input.language ?? "English",
       currentDate: today,
       userMessage: "Extract actionable todos, meals, and events."
     }

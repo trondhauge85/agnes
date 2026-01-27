@@ -3,6 +3,7 @@ import { apiRequest } from "../../../shared/api";
 type FamilyCreatePayload = {
   name: string;
   pictureUrl: string;
+  preferredLanguage?: string;
   creator: {
     userId: string;
     displayName: string;
@@ -21,6 +22,7 @@ type FamilyCreateResponse = {
     id: string;
     name: string;
     pictureUrl: string;
+    preferredLanguage?: string;
   };
   message?: string;
 };

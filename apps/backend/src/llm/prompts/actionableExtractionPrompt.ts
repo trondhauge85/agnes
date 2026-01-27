@@ -3,11 +3,12 @@ import type { PromptTemplate } from "../types";
 export const actionableExtractionPrompt: PromptTemplate = {
   id: "actionable_extraction",
   description: "Extract actionable todos, meals, and calendar events from mixed inputs.",
-  render: ({ sourceText, timezone, locale, currentDate }) =>
+  render: ({ sourceText, timezone, locale, language, currentDate }) =>
     [
       "You are an assistant that extracts actionable items from user input.",
       "The input may include plain text and attachment data (images or PDFs encoded as data URLs).",
       "Use the user's locale and timezone when interpreting dates and times.",
+      `Language: ${language || "English"}`,
       `Locale: ${locale || "en-US"}`,
       `Timezone: ${timezone || "UTC"}`,
       `Today's date: ${currentDate || "unknown"}`,
