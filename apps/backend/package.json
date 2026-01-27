@@ -9,7 +9,10 @@
     "deploy:worker": "wrangler deploy",
     "build": "echo 'build pipeline to be added'",
     "typecheck": "tsc -p tsconfig.json",
-    "db:migrate": "tsx src/db/runMigrations.ts"
+    "db:migrate": "tsx src/db/runMigrations.ts",
+    "summary:worker": "tsx src/runtime/summary-worker.ts",
+    "summary:daily": "tsx src/runtime/summary-worker.ts daily",
+    "summary:weekly": "tsx src/runtime/summary-worker.ts weekly"
   },
   "dependencies": {
     "@agnes/shared": "workspace:*",
