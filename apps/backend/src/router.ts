@@ -48,6 +48,12 @@ import {
   handleFamilyProjectUpdate
 } from "./handlers/familyProjects";
 import {
+  handleFamilyBudgetCreate,
+  handleFamilyBudgetDelete,
+  handleFamilyBudgetList,
+  handleFamilyBudgetUpdate
+} from "./handlers/familyBudgets";
+import {
   handleFinancialAccounts,
   handleFinancialImport,
   handleFinancialProviders,
@@ -277,6 +283,18 @@ export const handler = async (request: Request): Promise<Response> => {
     }
   }
 
+  const familyBudgetsMatch = pathname.match(/^\/families\/([^/]+)\/budgets$/);
+  if (familyBudgetsMatch) {
+    if (request.method === "GET") {
+      return withCors(await handleFamilyBudgetList(familyBudgetsMatch[1]));
+    }
+    if (request.method === "POST") {
+      return withCors(
+        await handleFamilyBudgetCreate(request, familyBudgetsMatch[1])
+      );
+    }
+  }
+
   const familyTodoMatch = pathname.match(
     /^\/families\/([^/]+)\/todos\/([^/]+)$/
   );
@@ -315,6 +333,29 @@ export const handler = async (request: Request): Promise<Response> => {
         await handleFamilyProjectDelete(
           familyProjectMatch[1],
           familyProjectMatch[2]
+        )
+      );
+    }
+  }
+
+  const familyBudgetMatch = pathname.match(
+    /^\/families\/([^/]+)\/budgets\/([^/]+)$/
+  );
+  if (familyBudgetMatch) {
+    if (request.method === "PATCH") {
+      return withCors(
+        await handleFamilyBudgetUpdate(
+          request,
+          familyBudgetMatch[1],
+          familyBudgetMatch[2]
+        )
+      );
+    }
+    if (request.method === "DELETE") {
+      return withCors(
+        await handleFamilyBudgetDelete(
+          familyBudgetMatch[1],
+          familyBudgetMatch[2]
         )
       );
     }
