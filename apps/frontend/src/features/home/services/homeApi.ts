@@ -166,6 +166,7 @@ export const parseActionableItems = async (payload: {
   timezone?: string;
   locale?: string;
   language?: string;
+  familyId?: string;
   context?: ActionParseContext;
   schemas?: ActionParseSchemas;
 }): Promise<ActionParseResponse> =>

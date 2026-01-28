@@ -200,6 +200,7 @@ export type ActionParseRequestPayload = {
   timezone?: string;
   locale?: string;
   language?: string;
+  familyId?: string;
   context?: Record<string, unknown>;
   schemas?: Record<string, unknown>;
 };

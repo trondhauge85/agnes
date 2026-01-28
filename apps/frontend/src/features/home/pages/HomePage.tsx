@@ -396,6 +396,7 @@ export const HomePage = () => {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         locale: selectedFamilyInfo?.preferredLanguage || navigator.language,
         language: selectedFamilyInfo?.preferredLanguage || navigator.language,
+        familyId: selectedFamily ?? undefined,
         context: {
           currentDateTime: new Date().toISOString(),
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,

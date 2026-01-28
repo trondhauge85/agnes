@@ -67,7 +67,8 @@ export class LlmService {
       ],
       tools: tools.map((tool) => tool.definition),
       responseSchema: skill.responseSchema,
-      maxTokens: task.maxTokens
+      maxTokens: task.maxTokens,
+      temperature: task.temperature
     };
 
     logger.info("llm.request", {
