@@ -10,19 +10,64 @@ export const actionableExtractionSkill: LlmSkill = {
       todos: {
         type: "array",
         items: {
-          type: "object"
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            notes: { type: "string" },
+            confidence: { type: "number" },
+            confidenceReasons: { type: "array", items: { type: "string" } },
+            source: { type: "string" }
+          }
         }
       },
       shoppingItems: {
         type: "array",
         items: {
-          type: "object"
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            notes: { type: "string" },
+            confidence: { type: "number" },
+            confidenceReasons: { type: "array", items: { type: "string" } },
+            source: { type: "string" }
+          }
         }
       },
       events: {
         type: "array",
         items: {
-          type: "object"
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            description: { type: "string" },
+            start: {
+              type: "object",
+              properties: {
+                dateTime: { type: "string" },
+                timeZone: { type: "string" }
+              }
+            },
+            end: {
+              type: "object",
+              properties: {
+                dateTime: { type: "string" },
+                timeZone: { type: "string" }
+              }
+            },
+            location: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                address: { type: "string" },
+                meetingUrl: { type: "string" }
+              }
+            },
+            recurrence: { type: "array", items: { type: "string" } },
+            confidence: { type: "number" },
+            confidenceReasons: { type: "array", items: { type: "string" } },
+            source: { type: "string" },
+            notes: { type: "string" }
+          }
         }
       }
     },
