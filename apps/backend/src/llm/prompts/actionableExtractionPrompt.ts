@@ -96,6 +96,8 @@ export const actionableExtractionPrompt: PromptTemplate = {
       "- Output must conform to the provided OUTPUT_SCHEMA.",
       "- Include arrays for each item type even if empty.",
       "- Do not include any fields not allowed by schema.",
+      "- Never include explanations, reasoning, or meta commentary in any field values.",
+      "- Keep titles short and literal; do not translate or embellish unless the input is already in that language.",
       "- Omit unknown optional fields rather than filling with null (unless schema allows null explicitly).",
       "- Produce a single JSON response and stop. Do not repeat items or emit multiple JSON objects.",
       "",
