@@ -149,6 +149,16 @@ const normalizeTags = (tags?: string[]): string[] =>
     .map((tag) => normalizeString(tag))
     .filter((tag) => Boolean(tag));
 
+const normalizeRecurrence = (recurrence?: string[]): string[] | undefined => {
+  if (!recurrence) {
+    return undefined;
+  }
+  const normalized = recurrence
+    .map((rule) => normalizeString(rule))
+    .filter((rule) => rule);
+  return normalized.length > 0 ? normalized : undefined;
+};
+
 const normalizeEventFilters = (url: URL): CalendarEventListFilters => ({
   start: normalizeString(url.searchParams.get("start") ?? "") || undefined,
   end: normalizeString(url.searchParams.get("end") ?? "") || undefined,
@@ -567,6 +577,7 @@ export const handleCalendarEventCreate = async (
     location: body.location,
     start: body.start,
     end: body.end,
+    recurrence: normalizeRecurrence(body.recurrence),
     status: body.status ?? "confirmed",
     participants: normalizeParticipantList(body.participants),
     tags: normalizeTags(body.tags),
@@ -650,6 +661,7 @@ export const handleCalendarEventUpdate = async (
     location: body.location,
     start: body.start,
     end: body.end,
+    recurrence: body.recurrence ? normalizeRecurrence(body.recurrence) : undefined,
     status: body.status,
     participants: body.participants
       ? normalizeParticipantList(body.participants)

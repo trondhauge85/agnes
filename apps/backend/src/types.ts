@@ -239,6 +239,7 @@ export type ActionParseEventResult = {
     address?: string;
     meetingUrl?: string;
   };
+  recurrence?: string[];
   confidence: number;
   source?: string;
 };
@@ -381,6 +382,7 @@ export type CalendarEvent = {
   location?: CalendarLocation;
   start: CalendarEventDateTime;
   end: CalendarEventDateTime;
+  recurrence?: string[];
   status: "confirmed" | "tentative" | "cancelled";
   participants: CalendarParticipant[];
   tags: string[];
@@ -416,6 +418,7 @@ export type CalendarEventCreatePayload = {
   start: CalendarEventDateTime;
   end: CalendarEventDateTime;
   location?: CalendarLocation;
+  recurrence?: string[];
   participants?: CalendarParticipant[];
   status?: "confirmed" | "tentative" | "cancelled";
   tags?: string[];
@@ -427,6 +430,7 @@ export type CalendarEventUpdatePayload = {
   start?: CalendarEventDateTime;
   end?: CalendarEventDateTime;
   location?: CalendarLocation;
+  recurrence?: string[];
   participants?: CalendarParticipant[];
   status?: "confirmed" | "tentative" | "cancelled";
   tags?: string[];

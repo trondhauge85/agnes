@@ -41,6 +41,7 @@ export type CalendarEvent = {
     timeZone?: string;
   };
   status: "confirmed" | "tentative" | "cancelled";
+  recurrence?: string[];
   location?: {
     name?: string;
     address?: string;
@@ -98,6 +99,7 @@ export type ActionParseEvent = {
     address?: string;
     meetingUrl?: string;
   };
+  recurrence?: string[];
   confidence: number;
   source?: string;
 };
@@ -189,6 +191,7 @@ export const createCalendarEvent = async (
       address?: string;
       meetingUrl?: string;
     };
+    recurrence?: string[];
   },
   options: {
     provider?: string;

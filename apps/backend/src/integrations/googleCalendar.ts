@@ -142,6 +142,15 @@ const getTagsFromEvent = (event: calendar_v3.Schema$Event): string[] => {
     .filter((tag) => tag);
 };
 
+const normalizeRecurrence = (
+  recurrence: calendar_v3.Schema$Event["recurrence"]
+): string[] | undefined => {
+  const normalized = (recurrence ?? [])
+    .map((rule) => (typeof rule === "string" ? rule.trim() : ""))
+    .filter((rule) => rule);
+  return normalized.length > 0 ? normalized : undefined;
+};
+
 const mapGoogleEvent = (
   calendarId: string,
   event: calendar_v3.Schema$Event
@@ -175,6 +184,7 @@ const mapGoogleEvent = (
       event.end?.date ?? null,
       event.end?.timeZone ?? null
     ),
+    recurrence: normalizeRecurrence(event.recurrence),
     status:
       event.status === "tentative" || event.status === "cancelled"
         ? event.status
@@ -227,6 +237,10 @@ const buildEventPatch = (
       dateTime: payload.end.dateTime,
       timeZone: payload.end.timeZone ?? undefined
     };
+  }
+
+  if (payload.recurrence !== undefined) {
+    patch.recurrence = normalizeRecurrence(payload.recurrence) ?? [];
   }
 
   if (payload.status) {
@@ -424,6 +438,7 @@ export const createGoogleEvent = async (
 ): Promise<CalendarEvent> => {
   const calendar = createCalendarClient(connection);
   const tagPayload = buildTagsPayload(payload.tags);
+  const recurrence = normalizeRecurrence(payload.recurrence);
   const response = await calendar.events.insert({
     calendarId,
     requestBody: {
@@ -442,6 +457,7 @@ export const createGoogleEvent = async (
         dateTime: payload.end.dateTime,
         timeZone: payload.end.timeZone ?? undefined
       },
+      recurrence: recurrence ?? undefined,
       status: payload.status,
       attendees: payload.participants.map((participant) => ({
         email: participant.email,

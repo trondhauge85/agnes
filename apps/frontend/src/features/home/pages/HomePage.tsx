@@ -476,7 +476,8 @@ export const HomePage = () => {
                   description: event.description,
                   start: event.start,
                   end: event.end,
-                  location: event.location
+                  location: event.location,
+                  recurrence: event.recurrence
                 },
                 { familyId: selectedFamily }
               )
