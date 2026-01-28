@@ -334,6 +334,34 @@ export type FamilyProjectUpdatePayload = {
   items?: FamilyProjectItemLink[] | null;
 };
 
+export type FamilyBudget = {
+  id: string;
+  familyId: string;
+  title: string;
+  description?: string;
+  tags: string[];
+  estimatedExpenses: number;
+  actualExpenses: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FamilyBudgetCreatePayload = {
+  title: string;
+  description?: string;
+  tags?: string[];
+  estimatedExpenses: number;
+  actualExpenses: number;
+};
+
+export type FamilyBudgetUpdatePayload = {
+  title?: string;
+  description?: string | null;
+  tags?: string[] | null;
+  estimatedExpenses?: number;
+  actualExpenses?: number;
+};
+
 export type CalendarProvider = "google";
 
 export type CalendarConnection = {
