@@ -208,6 +208,7 @@ export type ActionParseTodoResult = {
   id: string;
   title: string;
   notes?: string;
+  recurrence?: string[];
   confidence: number;
   confidenceReasons?: string[];
   source?: string;

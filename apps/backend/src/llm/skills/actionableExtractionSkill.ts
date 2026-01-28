@@ -14,6 +14,7 @@ export const actionableExtractionSkill: LlmSkill = {
           properties: {
             title: { type: "string" },
             notes: { type: "string" },
+            recurrence: { type: "array", items: { type: "string" } },
             confidence: { type: "number" },
             confidenceReasons: { type: "array", items: { type: "string" } },
             source: { type: "string" }

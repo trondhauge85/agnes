@@ -97,6 +97,7 @@ export const actionableExtractionPrompt: PromptTemplate = {
       "- Include arrays for each item type even if empty.",
       "- Do not include any fields not allowed by schema.",
       "- Omit unknown optional fields rather than filling with null (unless schema allows null explicitly).",
+      "- Produce a single JSON response and stop. Do not repeat items or emit multiple JSON objects.",
       "",
       "SAFETY / USER TRUST",
       "- Never fabricate details that could cause missed appointments or incorrect scheduling.",

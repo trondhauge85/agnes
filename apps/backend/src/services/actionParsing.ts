@@ -44,6 +44,7 @@ export type ActionParseTodo = {
   id: string;
   title: string;
   notes?: string;
+  recurrence?: string[];
   confidence: number;
   confidenceReasons?: string[];
   source?: string;
@@ -253,6 +254,7 @@ const buildSchemasJson = (input: ActionParseInput): Record<string, unknown> => {
       properties: {
         title: { type: "string" },
         notes: { type: "string" },
+        recurrence: { type: "array", items: { type: "string" } },
         confidence: { type: "number" },
         confidenceReasons: { type: "array", items: { type: "string" } },
         source: { type: "string" }
@@ -296,7 +298,8 @@ export const parseActionableItems = async (
       contextJson: formatJsonBlock(contextJson),
       schemasJson: formatJsonBlock(schemasJson),
       input: sourceText
-    }
+    },
+    maxTokens: 10000
   });
 
   const responseContent = task.response.message.content ?? "";
@@ -320,6 +323,7 @@ export const parseActionableItems = async (
           id: crypto.randomUUID(),
           title,
           notes: normalizeOptionalString(record.notes),
+          recurrence: normalizeRecurrence(record.recurrence),
           confidence,
           confidenceReasons: normalizeStringArray(record.confidenceReasons),
           source: normalizeOptionalString(record.source)
