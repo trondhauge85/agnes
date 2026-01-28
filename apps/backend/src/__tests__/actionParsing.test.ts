@@ -84,6 +84,37 @@ describe("parseActionableItems", () => {
     assert.equal(result.events[0].end, undefined);
   });
 
+  it("dedupes items and handles JSON code fences", async () => {
+    const provider = buildProvider(`Here you go:\n\`\`\`json\n${JSON.stringify({
+      todos: [{ title: "Pay invoice", confidence: 0.8 }],
+      shoppingItems: [
+        { title: "Milk", confidence: 0.7 },
+        { title: "Milk", confidence: 0.7 }
+      ],
+      events: [
+        {
+          title: "Dentist",
+          start: { dateTime: "2099-03-10T09:00:00.000Z" },
+          confidence: 0.9
+        },
+        {
+          title: "Dentist",
+          start: { dateTime: "2099-03-10T09:00:00.000Z" },
+          confidence: 0.9
+        }
+      ]
+    })}\n\`\`\``);
+
+    const llmService = createActionParsingLlmService(provider);
+    const result = await parseActionableItems(llmService, {
+      text: "Please pay the invoice and buy milk."
+    });
+
+    assert.equal(result.todos.length, 1);
+    assert.equal(result.shoppingItems.length, 1);
+    assert.equal(result.events.length, 1);
+  });
+
   it("throws when LLM response is invalid JSON", async () => {
     const provider = buildProvider("not-json");
     const llmService = createActionParsingLlmService(provider);

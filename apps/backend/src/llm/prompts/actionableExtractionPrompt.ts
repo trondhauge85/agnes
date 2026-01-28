@@ -21,6 +21,8 @@ export const actionableExtractionPrompt: PromptTemplate = {
       "- Do not add filler, repeated characters, or trailing text. Stop immediately after the JSON object.",
       "- Include arrays for todos, shoppingItems, and events even if empty.",
       "- Do not include any fields not allowed by schema.",
+      "- Never repeat the same item. If duplicates appear in the input, output a single deduplicated item.",
+      "- If output would exceed 20 total items, return only the highest-confidence items and drop the rest.",
       "- Keep titles short and specific (what the item is). Never pack time, recurrence rules, confidence, sources, or notes into titles.",
       "- Put details like time ranges, recurrence, reasoning, sources, or extra context into the appropriate fields (start/end/recurrence/notes/description/confidence fields), not the title.",
       "- If you are uncertain or the input is not actionable, return empty arrays.",
