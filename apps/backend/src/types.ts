@@ -78,7 +78,9 @@ export type FamilyTodo = {
   title: string;
   notes?: string;
   status: FamilyTodoStatus;
+  dueDate?: string;
   assignedToUserId?: string;
+  assignedToUserIds?: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -151,6 +153,8 @@ export type FamilyTodoCreatePayload = {
   notes?: string;
   status?: FamilyTodoStatus;
   assignedToUserId?: string | null;
+  assignedToUserIds?: string[] | null;
+  dueDate?: string | null;
 };
 
 export type FamilyTodoUpdatePayload = {
@@ -158,6 +162,8 @@ export type FamilyTodoUpdatePayload = {
   notes?: string | null;
   status?: FamilyTodoStatus;
   assignedToUserId?: string | null;
+  assignedToUserIds?: string[] | null;
+  dueDate?: string | null;
 };
 
 export type FamilyMealCreatePayload = {

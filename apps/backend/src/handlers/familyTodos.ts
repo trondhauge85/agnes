@@ -36,26 +36,56 @@ const normalizeTodoStatus = (
   return normalized as FamilyTodoStatus;
 };
 
-const normalizeAssignment = async (
-  familyId: string,
+type FamilyContext = NonNullable<Awaited<ReturnType<typeof findFamily>>>;
+
+const normalizeAssignments = (
+  family: FamilyContext,
+  assignedToUserIds: unknown,
   assignedToUserId: string | null | undefined
-): Promise<{ assignedToUserId?: string; error?: string }> => {
-  if (assignedToUserId === undefined) {
+): { assignedToUserIds?: string[]; assignedToUserId?: string; error?: string } => {
+  if (assignedToUserIds === undefined && assignedToUserId === undefined) {
     return {};
   }
 
+  if (assignedToUserIds !== undefined) {
+    if (assignedToUserIds === null) {
+      return { assignedToUserIds: [], assignedToUserId: undefined };
+    }
+
+    if (!Array.isArray(assignedToUserIds)) {
+      return { error: "Assigned members must be an array." };
+    }
+
+    const normalizedIds: string[] = [];
+    for (const id of assignedToUserIds) {
+      if (typeof id !== "string") {
+        return { error: "Assigned members must be string IDs." };
+      }
+      const normalized = normalizeString(id);
+      if (!normalized) {
+        return { error: "Assigned member ID cannot be empty." };
+      }
+      const member = getMemberById(family, normalized);
+      if (!member) {
+        return { error: "Assigned member not found in family." };
+      }
+      normalizedIds.push(member.userId);
+    }
+
+    const uniqueIds = Array.from(new Set(normalizedIds));
+    return {
+      assignedToUserIds: uniqueIds,
+      assignedToUserId: uniqueIds[0]
+    };
+  }
+
   if (assignedToUserId === null) {
-    return { assignedToUserId: undefined };
+    return { assignedToUserIds: [], assignedToUserId: undefined };
   }
 
-  const normalized = normalizeString(assignedToUserId);
+  const normalized = normalizeString(assignedToUserId ?? "");
   if (!normalized) {
-    return { assignedToUserId: undefined };
-  }
-
-  const family = await findFamily(familyId);
-  if (!family) {
-    return { error: "Family not found." };
+    return { assignedToUserIds: [], assignedToUserId: undefined };
   }
 
   const member = getMemberById(family, normalized);
@@ -63,7 +93,31 @@ const normalizeAssignment = async (
     return { error: "Assigned member not found in family." };
   }
 
-  return { assignedToUserId: member.userId };
+  return { assignedToUserIds: [member.userId], assignedToUserId: member.userId };
+};
+
+const normalizeDueDate = (
+  dueDate: string | null | undefined
+): { dueDate?: string; error?: string } => {
+  if (dueDate === undefined) {
+    return {};
+  }
+
+  if (dueDate === null) {
+    return { dueDate: undefined };
+  }
+
+  const normalized = normalizeString(dueDate);
+  if (!normalized) {
+    return { dueDate: undefined };
+  }
+
+  const parsed = Date.parse(normalized);
+  if (Number.isNaN(parsed)) {
+    return { error: "Due date must be a valid date." };
+  }
+
+  return { dueDate: new Date(parsed).toISOString() };
 };
 
 export const handleFamilyTodoList = async (
@@ -133,20 +187,32 @@ export const handleFamilyTodoCreate = async (
     });
   }
 
-  const { assignedToUserId, error } = await normalizeAssignment(
-    familyId,
+  const assignment = normalizeAssignments(
+    family,
+    body.assignedToUserIds,
     body.assignedToUserId
   );
-  if (error) {
-    const isNotFound = error === "Family not found.";
+  if (assignment.error) {
     return createErrorResponse({
-      code: isNotFound ? "not_found" : "bad_request",
-      message: error,
-      messageKey: isNotFound
-        ? "errors.family.not_found"
-        : "errors.todo.assignment_invalid",
-      status: isNotFound ? 404 : 400,
-      details: { assignedToUserId: body.assignedToUserId ?? null }
+      code: "bad_request",
+      message: assignment.error,
+      messageKey: "errors.todo.assignment_invalid",
+      status: 400,
+      details: {
+        assignedToUserId: body.assignedToUserId ?? null,
+        assignedToUserIds: body.assignedToUserIds ?? null
+      }
+    });
+  }
+
+  const dueDate = normalizeDueDate(body.dueDate);
+  if (dueDate.error) {
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: dueDate.error,
+      messageKey: "errors.todo.due_date_invalid",
+      status: 422,
+      details: { dueDate: body.dueDate ?? null }
     });
   }
 
@@ -158,7 +224,9 @@ export const handleFamilyTodoCreate = async (
     title,
     notes: notes || undefined,
     status,
-    assignedToUserId,
+    dueDate: dueDate.dueDate,
+    assignedToUserId: assignment.assignedToUserId,
+    assignedToUserIds: assignment.assignedToUserIds,
     createdAt: now,
     updatedAt: now
   };
@@ -234,26 +302,46 @@ export const handleFamilyTodoUpdate = async (
     });
   }
 
-  const assignment = await normalizeAssignment(familyId, body.assignedToUserId);
+  const assignment = normalizeAssignments(
+    family,
+    body.assignedToUserIds,
+    body.assignedToUserId
+  );
   if (assignment.error) {
-    const isNotFound = assignment.error === "Family not found.";
     return createErrorResponse({
-      code: isNotFound ? "not_found" : "bad_request",
+      code: "bad_request",
       message: assignment.error,
-      messageKey: isNotFound
-        ? "errors.family.not_found"
-        : "errors.todo.assignment_invalid",
-      status: isNotFound ? 404 : 400,
-      details: { assignedToUserId: body.assignedToUserId ?? null }
+      messageKey: "errors.todo.assignment_invalid",
+      status: 400,
+      details: {
+        assignedToUserId: body.assignedToUserId ?? null,
+        assignedToUserIds: body.assignedToUserIds ?? null
+      }
     });
   }
 
   const notes =
     body.notes === undefined ? undefined : normalizeString(body.notes ?? "");
 
+  const dueDate = normalizeDueDate(body.dueDate);
+  if (dueDate.error) {
+    return createErrorResponse({
+      code: "unprocessable_entity",
+      message: dueDate.error,
+      messageKey: "errors.todo.due_date_invalid",
+      status: 422,
+      details: { dueDate: body.dueDate ?? null }
+    });
+  }
+
   const updated = await updateFamilyTodo(familyId, todoId, (todo) => {
+    const nextAssignedToIds =
+      body.assignedToUserIds === undefined && body.assignedToUserId === undefined
+        ? todo.assignedToUserIds
+        : assignment.assignedToUserIds;
+
     const nextAssignedTo =
-      body.assignedToUserId === undefined
+      body.assignedToUserIds === undefined && body.assignedToUserId === undefined
         ? todo.assignedToUserId
         : assignment.assignedToUserId;
 
@@ -265,7 +353,12 @@ export const handleFamilyTodoUpdate = async (
           ? todo.notes
           : notes || undefined,
       status: status ?? todo.status,
+      dueDate:
+        body.dueDate === undefined
+          ? todo.dueDate
+          : dueDate.dueDate,
       assignedToUserId: nextAssignedTo,
+      assignedToUserIds: nextAssignedToIds,
       updatedAt: new Date().toISOString()
     };
   });

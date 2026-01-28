@@ -8,7 +8,9 @@ type FamilyTodoRow = {
   title: string;
   notes: string | null;
   status: FamilyTodo["status"];
+  due_date: string | null;
   assigned_to_user_id: string | null;
+  assigned_to_user_ids: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -18,16 +20,51 @@ const escapeLiteral = (value: string): string => `'${value.replace(/'/g, "''")}'
 const toSqlValue = (value: string | null | undefined): string =>
   value ? escapeLiteral(value) : "NULL";
 
-const serializeRow = (row: FamilyTodoRow): FamilyTodo => ({
-  id: row.id,
-  familyId: row.family_id,
-  title: row.title,
-  notes: row.notes ?? undefined,
-  status: row.status,
-  assignedToUserId: row.assigned_to_user_id ?? undefined,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at
-});
+const parseAssignedUserIds = (
+  assignedToUserIds: string | null,
+  assignedToUserId: string | null
+): string[] | undefined => {
+  if (assignedToUserIds) {
+    try {
+      const parsed = JSON.parse(assignedToUserIds);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((id): id is string => typeof id === "string" && id.length > 0);
+      }
+    } catch (error) {
+      console.warn("Failed to parse assigned todo members.", error);
+    }
+  }
+
+  return assignedToUserId ? [assignedToUserId] : undefined;
+};
+
+const serializeRow = (row: FamilyTodoRow): FamilyTodo => {
+  const assignedToUserIds = parseAssignedUserIds(
+    row.assigned_to_user_ids,
+    row.assigned_to_user_id
+  );
+
+  return {
+    id: row.id,
+    familyId: row.family_id,
+    title: row.title,
+    notes: row.notes ?? undefined,
+    status: row.status,
+    dueDate: row.due_date ?? undefined,
+    assignedToUserId: row.assigned_to_user_id ?? assignedToUserIds?.[0],
+    assignedToUserIds,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+};
+
+const serializeAssignedUserIds = (assignedToUserIds?: string[]): string | null => {
+  if (!assignedToUserIds || assignedToUserIds.length === 0) {
+    return null;
+  }
+
+  return JSON.stringify(assignedToUserIds);
+};
 
 const getAdapter = async (
   adapter?: DatabaseAdapter
@@ -39,7 +76,7 @@ export const listFamilyTodos = async (
 ): Promise<FamilyTodo[]> => {
   const db = await getAdapter(adapter);
   const rows = await db.query<FamilyTodoRow>(
-    `SELECT id, family_id, title, notes, status, assigned_to_user_id, created_at, updated_at
+    `SELECT id, family_id, title, notes, status, due_date, assigned_to_user_id, assigned_to_user_ids, created_at, updated_at
      FROM family_todos
      WHERE family_id = ${escapeLiteral(familyId)}
      ORDER BY created_at DESC`
@@ -53,6 +90,8 @@ export const saveFamilyTodo = async (
   adapter?: DatabaseAdapter
 ): Promise<void> => {
   const db = await getAdapter(adapter);
+  const assignedToUserIdsJson = serializeAssignedUserIds(todo.assignedToUserIds);
+  const primaryAssignee = todo.assignedToUserIds?.[0] ?? todo.assignedToUserId;
   await db.execute(
     `INSERT INTO family_todos (
       id,
@@ -60,7 +99,9 @@ export const saveFamilyTodo = async (
       title,
       notes,
       status,
+      due_date,
       assigned_to_user_id,
+      assigned_to_user_ids,
       created_at,
       updated_at
     ) VALUES (
@@ -69,7 +110,9 @@ export const saveFamilyTodo = async (
       ${escapeLiteral(todo.title)},
       ${toSqlValue(todo.notes)},
       ${escapeLiteral(todo.status)},
-      ${toSqlValue(todo.assignedToUserId)},
+      ${toSqlValue(todo.dueDate)},
+      ${toSqlValue(primaryAssignee)},
+      ${toSqlValue(assignedToUserIdsJson)},
       ${escapeLiteral(todo.createdAt)},
       ${escapeLiteral(todo.updatedAt)}
     )
@@ -77,7 +120,9 @@ export const saveFamilyTodo = async (
       title = excluded.title,
       notes = excluded.notes,
       status = excluded.status,
+      due_date = excluded.due_date,
       assigned_to_user_id = excluded.assigned_to_user_id,
+      assigned_to_user_ids = excluded.assigned_to_user_ids,
       created_at = excluded.created_at,
       updated_at = excluded.updated_at`
   );
@@ -90,7 +135,7 @@ export const getFamilyTodo = async (
 ): Promise<FamilyTodo | null> => {
   const db = await getAdapter(adapter);
   const rows = await db.query<FamilyTodoRow>(
-    `SELECT id, family_id, title, notes, status, assigned_to_user_id, created_at, updated_at
+    `SELECT id, family_id, title, notes, status, due_date, assigned_to_user_id, assigned_to_user_ids, created_at, updated_at
      FROM family_todos
      WHERE family_id = ${escapeLiteral(familyId)}
        AND id = ${escapeLiteral(todoId)}

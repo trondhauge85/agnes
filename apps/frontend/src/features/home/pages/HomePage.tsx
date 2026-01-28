@@ -690,9 +690,11 @@ export const HomePage = () => {
                             <ListItemText
                               primary={todo.title}
                               secondary={
-                                todo.assignedToUserId
-                                  ? `Assigned to ${todo.assignedToUserId}`
-                                  : "Unassigned"
+                                todo.assignedToUserIds && todo.assignedToUserIds.length > 0
+                                  ? `Assigned to ${todo.assignedToUserIds.join(", ")}`
+                                  : todo.assignedToUserId
+                                    ? `Assigned to ${todo.assignedToUserId}`
+                                    : "Unassigned"
                               }
                             />
                           </ListItem>
