@@ -6,43 +6,50 @@ export const actionableExtractionSkill: LlmSkill = {
   promptId: "actionable_extraction",
   responseSchema: {
     type: "object",
+    additionalProperties: false,
     properties: {
       todos: {
         type: "array",
         items: {
           type: "object",
+          additionalProperties: false,
           properties: {
-            title: { type: "string" },
+            title: { type: "string", maxLength: 120 },
             notes: { type: "string" },
             recurrence: { type: "array", items: { type: "string" } },
             confidence: { type: "number" },
             confidenceReasons: { type: "array", items: { type: "string" } },
             source: { type: "string" }
-          }
+          },
+          required: ["title", "confidence", "confidenceReasons", "source"]
         }
       },
       shoppingItems: {
         type: "array",
         items: {
           type: "object",
+          additionalProperties: false,
           properties: {
-            title: { type: "string" },
+            title: { type: "string", maxLength: 120 },
             notes: { type: "string" },
             confidence: { type: "number" },
             confidenceReasons: { type: "array", items: { type: "string" } },
             source: { type: "string" }
-          }
+          },
+          required: ["title", "confidence", "confidenceReasons", "source"]
         }
       },
       events: {
         type: "array",
         items: {
           type: "object",
+          additionalProperties: false,
           properties: {
-            title: { type: "string" },
+            title: { type: "string", maxLength: 120 },
             description: { type: "string" },
             start: {
               type: "object",
+              additionalProperties: false,
               properties: {
                 dateTime: { type: "string" },
                 timeZone: { type: "string" }
@@ -50,6 +57,7 @@ export const actionableExtractionSkill: LlmSkill = {
             },
             end: {
               type: "object",
+              additionalProperties: false,
               properties: {
                 dateTime: { type: "string" },
                 timeZone: { type: "string" }
@@ -57,6 +65,7 @@ export const actionableExtractionSkill: LlmSkill = {
             },
             location: {
               type: "object",
+              additionalProperties: false,
               properties: {
                 name: { type: "string" },
                 address: { type: "string" },
@@ -68,7 +77,8 @@ export const actionableExtractionSkill: LlmSkill = {
             confidenceReasons: { type: "array", items: { type: "string" } },
             source: { type: "string" },
             notes: { type: "string" }
-          }
+          },
+          required: ["title", "confidence", "confidenceReasons", "source"]
         }
       }
     },
