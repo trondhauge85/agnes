@@ -41,6 +41,7 @@ export const actionableExtractionPrompt: PromptTemplate = {
       "- Tickets (concert/flight/train with date/time/venue).",
       "- Free text (“Fotballtrening for Julie på mandager klokka 16.00–17.00”).",
       "- Mixed documents.",
+      "- Attachments are provided as inline file data alongside the INPUT metadata.",
       "",
       "EXTRACTION GUIDELINES (HELPFULNESS > COMPLETENESS)",
       "1) Do NOT guess dates, times, locations, or other high-impact details.",
