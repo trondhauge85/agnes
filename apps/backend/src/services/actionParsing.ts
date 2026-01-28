@@ -13,6 +13,7 @@ export type ActionParseInput = {
   timezone?: string;
   locale?: string;
   language?: string;
+  familyId?: string;
   context?: ActionParseContext;
   schemas?: ActionParseSchemas;
 };
@@ -299,7 +300,8 @@ export const parseActionableItems = async (
       schemasJson: formatJsonBlock(schemasJson),
       input: sourceText
     },
-    maxTokens: 10000
+    maxTokens: 2000,
+    temperature: 0
   });
 
   const responseContent = task.response.message.content ?? "";

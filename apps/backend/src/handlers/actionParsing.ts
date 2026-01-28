@@ -5,6 +5,7 @@ import { createActionParsingLlmService } from "../llm/actionParsingLlm";
 import { parseActionableItems } from "../services/actionParsing";
 import { createErrorResponse, createJsonResponse, parseJsonBody } from "../utils/http";
 import { normalizeString } from "../utils/strings";
+import { findFamily } from "../data/families";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 15 * 1024 * 1024;
@@ -118,13 +119,32 @@ export const buildActionParseHandler = (llmService: LlmService) =>
     }
 
     try {
+      const familyId = normalizeString((body as { familyId?: unknown }).familyId ?? "");
+      const family = familyId ? await findFamily(familyId) : null;
+      const familyMembers = family
+        ? family.members.map((member) => ({
+            name: member.displayName,
+            role: member.role,
+            age: member.age
+          }))
+        : undefined;
+      const preferredLocale = family?.preferredLanguage;
+      const contextRecord = normalizeRecord(body.context);
+      const mergedContext = {
+        ...(contextRecord ?? {}),
+        ...(familyMembers ? { familyMembers } : {})
+      };
       const result = await parseActionableItems(llmService, {
         text,
         files,
         timezone: normalizeString(body.timezone ?? "") || undefined,
-        locale: normalizeString(body.locale ?? "") || undefined,
+        locale:
+          normalizeString(body.locale ?? "") ||
+          normalizeString(preferredLocale ?? "") ||
+          undefined,
         language: normalizeString(body.language ?? "") || undefined,
-        context: normalizeRecord(body.context) as ActionParseInput["context"],
+        familyId: familyId || undefined,
+        context: mergedContext as ActionParseInput["context"],
         schemas: normalizeRecord(body.schemas) as ActionParseInput["schemas"]
       });
 

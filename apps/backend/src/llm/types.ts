@@ -63,6 +63,7 @@ export type LlmTaskRequest = {
   contextQuery?: string;
   contextScope?: string;
   maxTokens?: number;
+  temperature?: number;
 };
 
 export type LlmTaskResult = {
