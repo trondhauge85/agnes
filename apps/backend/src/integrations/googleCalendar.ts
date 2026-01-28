@@ -16,6 +16,7 @@ const DEFAULT_SCOPES = [
 ];
 
 const REQUIRED_SCOPES = ["https://www.googleapis.com/auth/calendar"];
+const APP_EVENT_TAG = "agnes:app";
 
 export class GoogleCalendarConfigError extends Error {
   constructor(message: string) {
@@ -142,6 +143,18 @@ const getTagsFromEvent = (event: calendar_v3.Schema$Event): string[] => {
     .filter((tag) => tag);
 };
 
+const getTagInfoFromEvent = (
+  event: calendar_v3.Schema$Event
+): { tags: string[]; origin: CalendarEvent["origin"] } => {
+  const tags = getTagsFromEvent(event);
+  const hasAppTag = tags.some((tag) => tag === APP_EVENT_TAG);
+  const visibleTags = tags.filter((tag) => tag !== APP_EVENT_TAG);
+  return {
+    tags: visibleTags,
+    origin: hasAppTag ? "app" : "user"
+  };
+};
+
 const normalizeRecurrence = (
   recurrence: calendar_v3.Schema$Event["recurrence"]
 ): string[] | undefined => {
@@ -156,6 +169,7 @@ const mapGoogleEvent = (
   event: calendar_v3.Schema$Event
 ): CalendarEvent => {
   const meetingUrl = getMeetingUrl(event);
+  const { tags, origin } = getTagInfoFromEvent(event);
   const locationValue = event.location?.trim();
   const location =
     locationValue || meetingUrl
@@ -190,18 +204,32 @@ const mapGoogleEvent = (
         ? event.status
         : "confirmed",
     participants: mapAttendees(event.attendees),
-    tags: getTagsFromEvent(event),
+    tags,
+    origin,
     createdAt,
     updatedAt
   };
 };
 
-const buildTagsPayload = (tags?: string[]): { tags: string } | undefined => {
-  if (!tags) {
+const buildTagsPayload = (
+  tags?: string[],
+  options?: { includeAppTag?: boolean }
+): { tags: string } | undefined => {
+  const includeAppTag = options?.includeAppTag ?? false;
+  if (!tags && !includeAppTag) {
     return undefined;
   }
 
-  return { tags: JSON.stringify(tags) };
+  const uniqueTags = new Set<string>();
+  for (const tag of tags ?? []) {
+    if (tag) {
+      uniqueTags.add(tag);
+    }
+  }
+  if (includeAppTag) {
+    uniqueTags.add(APP_EVENT_TAG);
+  }
+  return { tags: JSON.stringify(Array.from(uniqueTags)) };
 };
 
 const buildEventPatch = (
@@ -258,8 +286,10 @@ const buildEventPatch = (
     }));
   }
 
-  if (payload.tags !== undefined) {
-    const tagPayload = buildTagsPayload(payload.tags);
+  if (payload.tags !== undefined || payload.origin === "app") {
+    const tagPayload = buildTagsPayload(payload.tags, {
+      includeAppTag: payload.origin === "app"
+    });
     if (tagPayload) {
       patch.extendedProperties = {
         private: tagPayload
@@ -431,13 +461,23 @@ export const listGoogleEvents = async (
   return maxResults ? events.slice(0, maxResults) : events;
 };
 
+export const getGoogleEvent = async (
+  connection: CalendarConnection,
+  calendarId: string,
+  eventId: string
+): Promise<CalendarEvent> => {
+  const calendar = createCalendarClient(connection);
+  const response = await calendar.events.get({ calendarId, eventId });
+  return mapGoogleEvent(calendarId, response.data);
+};
+
 export const createGoogleEvent = async (
   connection: CalendarConnection,
   calendarId: string,
   payload: CalendarEvent
 ): Promise<CalendarEvent> => {
   const calendar = createCalendarClient(connection);
-  const tagPayload = buildTagsPayload(payload.tags);
+  const tagPayload = buildTagsPayload(payload.tags, { includeAppTag: true });
   const recurrence = normalizeRecurrence(payload.recurrence);
   const response = await calendar.events.insert({
     calendarId,

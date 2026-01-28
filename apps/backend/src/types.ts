@@ -408,6 +408,7 @@ export type CalendarEvent = {
   id: string;
   calendarId: string;
   providerEventId?: string;
+  origin?: "app" | "user";
   title: string;
   description?: string;
   location?: CalendarLocation;

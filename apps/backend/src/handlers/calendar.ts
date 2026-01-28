@@ -25,6 +25,7 @@ import {
   createGoogleEvent,
   deleteGoogleEvent,
   exchangeGoogleAuthorizationCode,
+  getGoogleEvent,
   getGoogleCalendar,
   listGoogleCalendars,
   listGoogleEvents,
@@ -62,6 +63,11 @@ type CalendarIntegration = {
       limit?: number;
     }
   ) => Promise<CalendarEvent[]>;
+  getEvent: (
+    connection: CalendarConnection,
+    calendarId: string,
+    eventId: string
+  ) => Promise<CalendarEvent>;
   createEvent: (
     connection: CalendarConnection,
     calendarId: string,
@@ -88,6 +94,7 @@ const calendarIntegrations: Record<CalendarProvider, CalendarIntegration> = {
     getCalendar: getGoogleCalendar,
     createCalendar: createGoogleCalendar,
     listEvents: listGoogleEvents,
+    getEvent: getGoogleEvent,
     createEvent: createGoogleEvent,
     updateEvent: updateGoogleEvent,
     deleteEvent: deleteGoogleEvent
@@ -572,6 +579,7 @@ export const handleCalendarEventCreate = async (
     id: "",
     calendarId,
     providerEventId: undefined,
+    origin: "app",
     title,
     description: normalizeString(body.description ?? "") || undefined,
     location: body.location,
@@ -672,6 +680,16 @@ export const handleCalendarEventUpdate = async (
 
   try {
     const integration = getCalendarIntegration(provider);
+    if (body.tags) {
+      const existing = await integration.getEvent(
+        connection,
+        calendarId,
+        eventId
+      );
+      if (existing.origin === "app") {
+        updatePayload.origin = "app";
+      }
+    }
     const updated = await integration.updateEvent(
       connection,
       calendarId,
