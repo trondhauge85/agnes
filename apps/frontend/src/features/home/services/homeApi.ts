@@ -6,7 +6,9 @@ export type FamilyTodo = {
   title: string;
   notes?: string;
   status: "open" | "completed";
+  dueDate?: string;
   assignedToUserId?: string;
+  assignedToUserIds?: string[];
   createdAt: string;
   updatedAt: string;
 };

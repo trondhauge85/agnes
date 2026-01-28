@@ -164,9 +164,22 @@ export const TodoPage = () => {
                 </ListItem>
               ) : (
                 todos.map((todo, index) => {
-                  const assigneeName = todo.assignedToUserId
-                    ? assignees[todo.assignedToUserId] ?? "Assigned member"
+                  const assigneeIds =
+                    todo.assignedToUserIds && todo.assignedToUserIds.length > 0
+                      ? todo.assignedToUserIds
+                      : todo.assignedToUserId
+                        ? [todo.assignedToUserId]
+                        : [];
+                  const assigneeNames =
+                    assigneeIds.length > 0
+                      ? assigneeIds.map((id) => assignees[id] ?? "Assigned member")
+                      : ["Unassigned"];
+                  const assigneeLabel = assigneeIds.length
+                    ? assigneeNames.join(", ")
                     : "Unassigned";
+                  const dueDateLabel = todo.dueDate
+                    ? `Due ${new Date(todo.dueDate).toLocaleDateString()}`
+                    : null;
                   return (
                     <Box key={todo.id}>
                       <ListItem
@@ -197,17 +210,20 @@ export const TodoPage = () => {
                           ) : null}
                           <Typography variant="caption" color="text.secondary">
                             Updated {new Date(todo.updatedAt).toLocaleDateString()}
+                            {dueDateLabel ? ` • ${dueDateLabel}` : ""}
                           </Typography>
                         </Box>
                         <Stack direction="row" alignItems="center" spacing={1}>
                           <Typography variant="caption" color="text.secondary">
-                            Owner
+                            Owners
                           </Typography>
                           <AvatarGroup max={2} sx={{ "& .MuiAvatar-root": { width: 28, height: 28 } }}>
-                            <Avatar>{assigneeName.slice(0, 1)}</Avatar>
+                            {assigneeNames.map((name) => (
+                              <Avatar key={name}>{name.slice(0, 1)}</Avatar>
+                            ))}
                           </AvatarGroup>
                           <Typography variant="body2" color="text.secondary">
-                            {assigneeName}
+                            {assigneeLabel}
                           </Typography>
                         </Stack>
                       </ListItem>
