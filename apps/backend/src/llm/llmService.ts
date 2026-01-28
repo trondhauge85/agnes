@@ -66,7 +66,8 @@ export class LlmService {
         { role: "user", content: task.input.userMessage ?? "" }
       ],
       tools: tools.map((tool) => tool.definition),
-      responseSchema: skill.responseSchema
+      responseSchema: skill.responseSchema,
+      maxTokens: task.maxTokens
     };
 
     logger.info("llm.request", {

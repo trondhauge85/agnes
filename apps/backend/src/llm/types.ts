@@ -62,6 +62,7 @@ export type LlmTaskRequest = {
   input: Record<string, string>;
   contextQuery?: string;
   contextScope?: string;
+  maxTokens?: number;
 };
 
 export type LlmTaskResult = {
