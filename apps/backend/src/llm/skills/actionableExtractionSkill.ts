@@ -6,13 +6,11 @@ export const actionableExtractionSkill: LlmSkill = {
   promptId: "actionable_extraction",
   responseSchema: {
     type: "object",
-    additionalProperties: false,
     properties: {
       todos: {
         type: "array",
         items: {
           type: "object",
-          additionalProperties: false,
           properties: {
             title: { type: "string", maxLength: 120 },
             notes: { type: "string" },
@@ -28,7 +26,6 @@ export const actionableExtractionSkill: LlmSkill = {
         type: "array",
         items: {
           type: "object",
-          additionalProperties: false,
           properties: {
             title: { type: "string", maxLength: 120 },
             notes: { type: "string" },
@@ -43,13 +40,11 @@ export const actionableExtractionSkill: LlmSkill = {
         type: "array",
         items: {
           type: "object",
-          additionalProperties: false,
           properties: {
             title: { type: "string", maxLength: 120 },
             description: { type: "string" },
             start: {
               type: "object",
-              additionalProperties: false,
               properties: {
                 dateTime: { type: "string" },
                 timeZone: { type: "string" }
@@ -57,7 +52,6 @@ export const actionableExtractionSkill: LlmSkill = {
             },
             end: {
               type: "object",
-              additionalProperties: false,
               properties: {
                 dateTime: { type: "string" },
                 timeZone: { type: "string" }
@@ -65,7 +59,6 @@ export const actionableExtractionSkill: LlmSkill = {
             },
             location: {
               type: "object",
-              additionalProperties: false,
               properties: {
                 name: { type: "string" },
                 address: { type: "string" },
