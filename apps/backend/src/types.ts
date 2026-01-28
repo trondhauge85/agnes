@@ -200,6 +200,8 @@ export type ActionParseRequestPayload = {
   timezone?: string;
   locale?: string;
   language?: string;
+  context?: Record<string, unknown>;
+  schemas?: Record<string, unknown>;
 };
 
 export type ActionParseTodoResult = {
@@ -207,18 +209,16 @@ export type ActionParseTodoResult = {
   title: string;
   notes?: string;
   confidence: number;
+  confidenceReasons?: string[];
   source?: string;
 };
 
-export type ActionParseMealResult = {
+export type ActionParseShoppingItemResult = {
   id: string;
   title: string;
   notes?: string;
-  mealType?: string;
-  scheduledFor?: string;
-  servings?: number;
-  recipeUrl?: string;
   confidence: number;
+  confidenceReasons?: string[];
   source?: string;
 };
 
@@ -241,6 +241,7 @@ export type ActionParseEventResult = {
   };
   recurrence?: string[];
   confidence: number;
+  confidenceReasons?: string[];
   source?: string;
 };
 
@@ -248,7 +249,7 @@ export type ActionParseResponsePayload = {
   status: "parsed";
   results: {
     todos: ActionParseTodoResult[];
-    meals: ActionParseMealResult[];
+    shoppingItems: ActionParseShoppingItemResult[];
     events: ActionParseEventResult[];
   };
 };

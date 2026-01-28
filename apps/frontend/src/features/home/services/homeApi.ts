@@ -1,4 +1,5 @@
 import { apiRequest } from "../../../shared/api";
+import type { FamilyShoppingItem } from "../../shopping/services/shoppingApi";
 
 export type FamilyTodo = {
   id: string;
@@ -67,18 +68,16 @@ export type ActionParseTodo = {
   title: string;
   notes?: string;
   confidence: number;
+  confidenceReasons?: string[];
   source?: string;
 };
 
-export type ActionParseMeal = {
+export type ActionParseShoppingItem = {
   id: string;
   title: string;
   notes?: string;
-  mealType?: string;
-  scheduledFor?: string;
-  servings?: number;
-  recipeUrl?: string;
   confidence: number;
+  confidenceReasons?: string[];
   source?: string;
 };
 
@@ -101,14 +100,38 @@ export type ActionParseEvent = {
   };
   recurrence?: string[];
   confidence: number;
+  confidenceReasons?: string[];
   source?: string;
+};
+
+export type ActionParseContextMember = {
+  name: string;
+  role?: string;
+  age?: number;
+};
+
+export type ActionParseContext = {
+  familyMembers?: ActionParseContextMember[];
+  currentDateTime?: string;
+  timezone?: string;
+  weekNumber?: number;
+  weekday?: string;
+  locale?: string;
+  sourceMetadata?: Record<string, unknown>;
+};
+
+export type ActionParseSchemas = {
+  eventSchema?: Record<string, unknown>;
+  todoSchema?: Record<string, unknown>;
+  shoppingItemSchema?: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
 };
 
 export type ActionParseResponse = {
   status: "parsed";
   results: {
     todos: ActionParseTodo[];
-    meals: ActionParseMeal[];
+    shoppingItems: ActionParseShoppingItem[];
     events: ActionParseEvent[];
   };
 };
@@ -143,6 +166,8 @@ export const parseActionableItems = async (payload: {
   timezone?: string;
   locale?: string;
   language?: string;
+  context?: ActionParseContext;
+  schemas?: ActionParseSchemas;
 }): Promise<ActionParseResponse> =>
   apiRequest<ActionParseResponse>("/actions/parse", {
     method: "POST",
@@ -179,6 +204,22 @@ export const createFamilyMeal = async (
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
+
+export const createFamilyShoppingItem = async (
+  familyId: string,
+  payload: {
+    title: string;
+    notes?: string;
+  }
+): Promise<{ status: string; item: FamilyShoppingItem }> =>
+  apiRequest<{ status: string; item: FamilyShoppingItem }>(
+    `/families/${familyId}/shopping-items`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
 
 export const createCalendarEvent = async (
   payload: {

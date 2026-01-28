@@ -20,16 +20,14 @@ describe("parseActionableItems", () => {
     const provider = buildProvider(
       JSON.stringify({
         todos: [
-          { title: "Pick up laundry", notes: "Before 6pm", confidence: 0.82 }
-        ],
-        meals: [
           {
-            title: "Taco night",
-            mealType: "dinner",
-            scheduledFor: "2099-02-10T18:00:00.000Z",
-            confidence: 0.7
+            title: "Pick up laundry",
+            notes: "Before 6pm",
+            confidence: 0.82,
+            confidenceReasons: ["explicit reminder"]
           }
         ],
+        shoppingItems: [{ title: "Milk", confidence: 0.7 }],
         events: [
           {
             title: "Dentist",
@@ -54,18 +52,18 @@ describe("parseActionableItems", () => {
     });
 
     assert.equal(result.todos.length, 1);
-    assert.equal(result.meals.length, 1);
+    assert.equal(result.shoppingItems.length, 1);
     assert.equal(result.events.length, 2);
     assert.ok(result.todos[0].id);
-    assert.equal(result.meals[0].mealType, "dinner");
+    assert.equal(result.shoppingItems[0].title, "Milk");
     assert.equal(result.events[1].end, undefined);
   });
 
-  it("defaults event end time when missing", async () => {
+  it("keeps missing end time empty", async () => {
     const provider = buildProvider(
       JSON.stringify({
         todos: [],
-        meals: [],
+        shoppingItems: [],
         events: [
           {
             title: "Soccer practice",
@@ -83,7 +81,7 @@ describe("parseActionableItems", () => {
 
     assert.equal(result.events.length, 1);
     assert.equal(result.events[0].start?.dateTime, "2025-05-22T18:30:00.000Z");
-    assert.equal(result.events[0].end?.dateTime, "2025-05-22T19:30:00.000Z");
+    assert.equal(result.events[0].end, undefined);
   });
 
   it("throws when LLM response is invalid JSON", async () => {

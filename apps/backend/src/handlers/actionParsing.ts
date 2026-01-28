@@ -78,6 +78,13 @@ const normalizeFiles = (files: unknown): { files: ActionParseFile[]; error?: str
   return { files: normalized };
 };
 
+const normalizeRecord = (value: unknown): Record<string, unknown> | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  return value as Record<string, unknown>;
+};
+
 export const buildActionParseHandler = (llmService: LlmService) =>
   async (request: Request): Promise<Response> => {
     const body = await parseJsonBody<ActionParseInput>(request);
@@ -116,7 +123,9 @@ export const buildActionParseHandler = (llmService: LlmService) =>
         files,
         timezone: normalizeString(body.timezone ?? "") || undefined,
         locale: normalizeString(body.locale ?? "") || undefined,
-        language: normalizeString(body.language ?? "") || undefined
+        language: normalizeString(body.language ?? "") || undefined,
+        context: normalizeRecord(body.context) as ActionParseInput["context"],
+        schemas: normalizeRecord(body.schemas) as ActionParseInput["schemas"]
       });
 
       return createJsonResponse({

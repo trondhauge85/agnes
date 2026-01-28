@@ -2,7 +2,7 @@ import type { LlmSkill } from "../types";
 
 export const actionableExtractionSkill: LlmSkill = {
   name: "extract_actionable_items",
-  description: "Extract actionable todos, meals, and calendar events from mixed inputs.",
+  description: "Extract actionable todos, shopping list items, and calendar events from mixed inputs.",
   promptId: "actionable_extraction",
   responseSchema: {
     type: "object",
@@ -11,74 +11,24 @@ export const actionableExtractionSkill: LlmSkill = {
         type: "array",
         items: {
           type: "object",
-          properties: {
-            title: { type: "string" },
-            notes: { type: "string" },
-            confidence: { type: "number" },
-            source: { type: "string" }
-          },
-          required: ["title", "confidence"]
+          additionalProperties: true
         }
       },
-      meals: {
+      shoppingItems: {
         type: "array",
         items: {
           type: "object",
-          properties: {
-            title: { type: "string" },
-            notes: { type: "string" },
-            mealType: { type: "string" },
-            scheduledFor: { type: "string" },
-            servings: { type: "number" },
-            recipeUrl: { type: "string" },
-            confidence: { type: "number" },
-            source: { type: "string" }
-          },
-          required: ["title", "confidence"]
+          additionalProperties: true
         }
       },
       events: {
         type: "array",
         items: {
           type: "object",
-          properties: {
-            title: { type: "string" },
-            description: { type: "string" },
-            start: {
-              type: "object",
-              properties: {
-                dateTime: { type: "string" },
-                timeZone: { type: "string" }
-              }
-            },
-            end: {
-              type: "object",
-              properties: {
-                dateTime: { type: "string" },
-                timeZone: { type: "string" }
-              }
-            },
-            location: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                address: { type: "string" },
-                meetingUrl: { type: "string" }
-              }
-            },
-            recurrence: {
-              type: "array",
-              items: {
-                type: "string"
-              }
-            },
-            confidence: { type: "number" },
-            source: { type: "string" }
-          },
-          required: ["title", "confidence"]
+          additionalProperties: true
         }
       }
     },
-    required: ["todos", "meals", "events"]
+    required: ["todos", "shoppingItems", "events"]
   }
 };

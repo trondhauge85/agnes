@@ -42,12 +42,12 @@ import {
   fetchCalendarEvents,
   parseActionableItems,
   createCalendarEvent,
-  createFamilyMeal,
+  createFamilyShoppingItem,
   createFamilyTodo,
   fetchFamilyMeals,
   fetchFamilyTodos,
   type ActionParseEvent,
-  type ActionParseMeal,
+  type ActionParseShoppingItem,
   type ActionParseTodo,
   type CalendarEvent,
   type FamilyMeal,
@@ -151,6 +151,16 @@ const formatDateTime = (value?: string) => {
   return parsed.toLocaleString();
 };
 
+const getIsoWeekNumber = (date: Date) => {
+  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNr = (target.getUTCDay() + 6) % 7;
+  target.setUTCDate(target.getUTCDate() - dayNr + 3);
+  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
+  const firstDayNr = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNr + 3);
+  return 1 + Math.round((target.getTime() - firstThursday.getTime()) / 604800000);
+};
+
 export const HomePage = () => {
   const navigate = useNavigate();
   const todayRange = useMemo(() => getTodayRange(), []);
@@ -180,7 +190,7 @@ export const HomePage = () => {
   );
   const [parseResults, setParseResults] = useState<{
     todos: ActionParseTodo[];
-    meals: ActionParseMeal[];
+    shoppingItems: ActionParseShoppingItem[];
     events: ActionParseEvent[];
   } | null>(null);
   const [parseSelections, setParseSelections] = useState<Record<string, boolean>>({});
@@ -385,7 +395,19 @@ export const HomePage = () => {
         files: files.length > 0 ? files : undefined,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         locale: selectedFamilyInfo?.preferredLanguage || navigator.language,
-        language: selectedFamilyInfo?.preferredLanguage || navigator.language
+        language: selectedFamilyInfo?.preferredLanguage || navigator.language,
+        context: {
+          currentDateTime: new Date().toISOString(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          locale: selectedFamilyInfo?.preferredLanguage || navigator.language,
+          weekday: new Date().toLocaleDateString(undefined, { weekday: "long" }),
+          weekNumber: getIsoWeekNumber(new Date()),
+          sourceMetadata: {
+            fileCount: files.length,
+            fileNames: files.map((file) => file.name),
+            hasText: Boolean(note.trim())
+          }
+        }
       });
 
       setParseResults(response.results);
@@ -393,7 +415,7 @@ export const HomePage = () => {
       response.results.todos.forEach((item) => {
         selections[item.id] = true;
       });
-      response.results.meals.forEach((item) => {
+      response.results.shoppingItems.forEach((item) => {
         selections[item.id] = true;
       });
       response.results.events.forEach((item) => {
@@ -414,7 +436,9 @@ export const HomePage = () => {
     }
 
     const selectedTodos = parseResults.todos.filter((item) => parseSelections[item.id]);
-    const selectedMeals = parseResults.meals.filter((item) => parseSelections[item.id]);
+    const selectedShoppingItems = parseResults.shoppingItems.filter(
+      (item) => parseSelections[item.id]
+    );
     const selectedEvents = parseResults.events.filter((item) => parseSelections[item.id]);
     const normalizedEvents = selectedEvents
       .map(withDefaultEventEnd)
@@ -422,16 +446,16 @@ export const HomePage = () => {
 
     if (
       selectedTodos.length === 0 &&
-      selectedMeals.length === 0 &&
+      selectedShoppingItems.length === 0 &&
       normalizedEvents.length === 0
     ) {
       setParseError({ message: "Select at least one item to add.", messageKey: "errors.parse.none" });
       return;
     }
 
-    if (!selectedFamily && (selectedTodos.length > 0 || selectedMeals.length > 0)) {
+    if (!selectedFamily && (selectedTodos.length > 0 || selectedShoppingItems.length > 0)) {
       setParseError({
-        message: "Select a family before adding todos or meals.",
+        message: "Select a family before adding todos or shopping items.",
         messageKey: "errors.parse.family_required"
       });
       return;
@@ -452,15 +476,11 @@ export const HomePage = () => {
             })
           );
         });
-        selectedMeals.forEach((meal) => {
+        selectedShoppingItems.forEach((item) => {
           tasks.push(
-            createFamilyMeal(selectedFamily, {
-              title: meal.title,
-              notes: meal.notes,
-              mealType: meal.mealType,
-              scheduledFor: meal.scheduledFor,
-              servings: meal.servings,
-              recipeUrl: meal.recipeUrl
+            createFamilyShoppingItem(selectedFamily, {
+              title: item.title,
+              notes: item.notes
             })
           );
         });
@@ -1032,8 +1052,8 @@ export const HomePage = () => {
 
               {!parseResults && !isParsing ? (
                 <Typography variant="body2" color="text.secondary">
-                  Run analysis to turn your note or attachments into actionable todos, meals, and
-                  calendar events.
+                  Run analysis to turn your note or attachments into actionable todos, shopping
+                  items, and calendar events.
                 </Typography>
               ) : null}
 
@@ -1079,45 +1099,38 @@ export const HomePage = () => {
 
                   <Stack spacing={1}>
                     <Typography variant="subtitle2" fontWeight={600}>
-                      Meals
+                      Shopping items
                     </Typography>
-                    {parseResults.meals.length > 0 ? (
+                    {parseResults.shoppingItems.length > 0 ? (
                       <List disablePadding>
-                        {parseResults.meals.map((meal) => (
+                        {parseResults.shoppingItems.map((item) => (
                           <ListItem
-                            key={meal.id}
+                            key={item.id}
                             disableGutters
                             alignItems="flex-start"
                             secondaryAction={
-                              <Chip label={formatConfidence(meal.confidence)} size="small" />
+                              <Chip label={formatConfidence(item.confidence)} size="small" />
                             }
                           >
                             <Checkbox
-                              checked={Boolean(parseSelections[meal.id])}
+                              checked={Boolean(parseSelections[item.id])}
                               onChange={() =>
                                 setParseSelections((prev) => ({
                                   ...prev,
-                                  [meal.id]: !prev[meal.id]
+                                  [item.id]: !prev[item.id]
                                 }))
                               }
                             />
                             <ListItemText
-                              primary={meal.title}
-                              secondary={[
-                                meal.mealType,
-                                meal.scheduledFor ? formatDateTime(meal.scheduledFor) : null,
-                                meal.notes,
-                                meal.source
-                              ]
-                                .filter(Boolean)
-                                .join(" • ")}
+                              primary={item.title}
+                              secondary={[item.notes, item.source].filter(Boolean).join(" • ")}
                             />
                           </ListItem>
                         ))}
                       </List>
                     ) : (
                       <Typography variant="body2" color="text.secondary">
-                        No meals detected yet.
+                        No shopping items detected yet.
                       </Typography>
                     )}
                   </Stack>
