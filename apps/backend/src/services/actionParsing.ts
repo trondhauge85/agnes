@@ -52,6 +52,7 @@ export type ActionParseEvent = {
     address?: string;
     meetingUrl?: string;
   };
+  recurrence?: string[];
   confidence: number;
   source?: string;
 };
@@ -105,6 +106,16 @@ const normalizeDateTime = (value: unknown): string | undefined => {
     return undefined;
   }
   return parsed.toISOString();
+};
+
+const normalizeRecurrence = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const normalized = value
+    .map((item) => normalizeString(typeof item === "string" ? item : ""))
+    .filter((item) => item);
+  return normalized.length > 0 ? normalized : undefined;
 };
 
 const addMinutes = (value: string, minutes: number): string | undefined => {
@@ -266,6 +277,7 @@ export const parseActionableItems = async (
                 meetingUrl: normalizeOptionalString(locationRecord.meetingUrl)
               }
             : undefined,
+          recurrence: normalizeRecurrence(record.recurrence),
           confidence,
           source: normalizeOptionalString(record.source)
         } satisfies ActionParseEvent;

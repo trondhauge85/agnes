@@ -66,6 +66,12 @@ export const actionableExtractionSkill: LlmSkill = {
                 meetingUrl: { type: "string" }
               }
             },
+            recurrence: {
+              type: "array",
+              items: {
+                type: "string"
+              }
+            },
             confidence: { type: "number" },
             source: { type: "string" }
           },
