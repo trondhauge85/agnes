@@ -143,11 +143,24 @@ const normalizeSourceText = (input: ActionParseInput): string => {
       lines.push(`Attachment ${index + 1}:`);
       lines.push(`Name: ${file.name}`);
       lines.push(`MimeType: ${file.mimeType}`);
-      lines.push(`DataUrl: ${file.dataUrl}`);
+      lines.push("Data: provided as inline attachment.");
     });
   }
 
   return lines.join("\n");
+};
+
+const buildAttachmentMessage = (input: ActionParseInput): string => {
+  if (!input.files || input.files.length === 0) {
+    return "";
+  }
+
+  return input.files
+    .map(
+      (file, index) =>
+        `Attachment ${index + 1} dataUrl: ${normalizeString(file.dataUrl)}`
+    )
+    .join("\n");
 };
 
 const normalizeKeySegment = (value: string | undefined): string =>
@@ -360,12 +373,14 @@ export const parseActionableItems = async (
   const sourceText = normalizeSourceText(input);
   const contextJson = buildContextJson(input);
   const schemasJson = buildSchemasJson(input);
+  const attachmentMessage = buildAttachmentMessage(input);
   const task = await llmService.runTask({
     skillName: "extract_actionable_items",
     input: {
       contextJson: formatJsonBlock(contextJson),
       schemasJson: formatJsonBlock(schemasJson),
-      input: sourceText
+      input: sourceText,
+      userMessage: attachmentMessage
     },
     maxTokens: 2000,
     temperature: 0
