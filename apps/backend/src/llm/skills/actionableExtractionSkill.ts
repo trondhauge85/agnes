@@ -10,22 +10,19 @@ export const actionableExtractionSkill: LlmSkill = {
       todos: {
         type: "array",
         items: {
-          type: "object",
-          additionalProperties: true
+          type: "object"
         }
       },
       shoppingItems: {
         type: "array",
         items: {
-          type: "object",
-          additionalProperties: true
+          type: "object"
         }
       },
       events: {
         type: "array",
         items: {
-          type: "object",
-          additionalProperties: true
+          type: "object"
         }
       }
     },
