@@ -100,14 +100,16 @@ export const createGeminiProvider = (config: GeminiProviderConfig): LlmProvider 
       const systemText = systemMessages.map((message) => message.content).join("\n\n");
       const systemExtraction = extractInlineParts(systemText);
 
-      const contents: GeminiContent[] = otherMessages.map((message) => {
-        const { text, inlineParts } = extractInlineParts(message.content);
-        const role = message.role === "assistant" ? "model" : "user";
-        return {
-          role,
-          parts: buildParts(text, inlineParts)
-        };
-      });
+      const contents: GeminiContent[] = otherMessages
+        .map((message) => {
+          const { text, inlineParts } = extractInlineParts(message.content);
+          const role = message.role === "assistant" ? "model" : "user";
+          return {
+            role,
+            parts: buildParts(text, inlineParts)
+          };
+        })
+        .filter((content) => content.parts.length > 0);
 
       if (systemExtraction.inlineParts.length > 0) {
         if (contents.length === 0) {
@@ -115,6 +117,10 @@ export const createGeminiProvider = (config: GeminiProviderConfig): LlmProvider 
         } else {
           contents[0].parts = contents[0].parts.concat(systemExtraction.inlineParts);
         }
+      }
+
+      if (contents.length === 0) {
+        contents.push({ role: "user", parts: [{ text: "OK" }] });
       }
 
       const payload: GeminiRequest = {
