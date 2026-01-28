@@ -150,15 +150,82 @@ const normalizeSourceText = (input: ActionParseInput): string => {
   return lines.join("\n");
 };
 
+const normalizeKeySegment = (value: string | undefined): string =>
+  normalizeString(value ?? "").toLowerCase();
+
+const normalizeKeyArray = (value: string[] | undefined): string =>
+  Array.isArray(value) ? value.map((item) => normalizeKeySegment(item)).join("|") : "";
+
+const dedupeByKey = <T>(items: T[], getKey: (item: T) => string): T[] => {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = getKey(item);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
+
+const buildTodoKey = (item: ActionParseTodo): string =>
+  [
+    normalizeKeySegment(item.title),
+    normalizeKeySegment(item.notes),
+    normalizeKeyArray(item.recurrence)
+  ].join("|");
+
+const buildShoppingItemKey = (item: ActionParseShoppingItem): string =>
+  [normalizeKeySegment(item.title), normalizeKeySegment(item.notes)].join("|");
+
+const buildEventKey = (item: ActionParseEvent): string => {
+  const location = item.location ?? {};
+  return [
+    normalizeKeySegment(item.title),
+    normalizeKeySegment(item.description),
+    normalizeKeySegment(item.start?.dateTime),
+    normalizeKeySegment(item.start?.timeZone),
+    normalizeKeySegment(item.end?.dateTime),
+    normalizeKeySegment(item.end?.timeZone),
+    normalizeKeySegment(location.name),
+    normalizeKeySegment(location.address),
+    normalizeKeySegment(location.meetingUrl),
+    normalizeKeyArray(item.recurrence)
+  ].join("|");
+};
+
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
-const parseJsonResponse = (content: string): Record<string, unknown> => {
-  try {
-    return JSON.parse(content) as Record<string, unknown>;
-  } catch (error) {
-    throw new Error("LLM response was not valid JSON.");
+const extractJsonCandidate = (content: string): string => {
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return trimmed;
   }
+  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fencedMatch?.[1]) {
+    return fencedMatch[1].trim();
+  }
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
+  }
+  return trimmed;
+};
+
+const parseJsonResponse = (content: string): Record<string, unknown> => {
+  const candidates = [content, extractJsonCandidate(content)]
+    .map((candidate) => candidate.trim())
+    .filter((candidate, index, list) => candidate && list.indexOf(candidate) === index);
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate) as Record<string, unknown>;
+    } catch (error) {
+      continue;
+    }
+  }
+  throw new Error("LLM response was not valid JSON.");
 };
 
 const getDatePartsForTimeZone = (
@@ -312,91 +379,100 @@ export const parseActionableItems = async (
   const events = Array.isArray(parsed.events) ? parsed.events : [];
 
   return {
-    todos: todos
-      .map((item) => {
-        const record = asRecord(item);
-        const title = normalizeOptionalString(record.title) ?? "";
-        const confidence = normalizeConfidence(record.confidence);
-        if (!title || confidence === null) {
-          return null;
-        }
+    todos: dedupeByKey(
+      todos
+        .map((item) => {
+          const record = asRecord(item);
+          const title = normalizeOptionalString(record.title) ?? "";
+          const confidence = normalizeConfidence(record.confidence);
+          if (!title || confidence === null) {
+            return null;
+          }
 
-        return {
-          id: crypto.randomUUID(),
-          title,
-          notes: normalizeOptionalString(record.notes),
-          recurrence: normalizeRecurrence(record.recurrence),
-          confidence,
-          confidenceReasons: normalizeStringArray(record.confidenceReasons),
-          source: normalizeOptionalString(record.source)
-        } satisfies ActionParseTodo;
-      })
-      .filter((item): item is ActionParseTodo => Boolean(item)),
-    shoppingItems: shoppingItems
-      .map((item) => {
-        const record = asRecord(item);
-        const title = normalizeOptionalString(record.title) ?? "";
-        const confidence = normalizeConfidence(record.confidence);
-        if (!title || confidence === null) {
-          return null;
-        }
+          return {
+            id: crypto.randomUUID(),
+            title,
+            notes: normalizeOptionalString(record.notes),
+            recurrence: normalizeRecurrence(record.recurrence),
+            confidence,
+            confidenceReasons: normalizeStringArray(record.confidenceReasons),
+            source: normalizeOptionalString(record.source)
+          } satisfies ActionParseTodo;
+        })
+        .filter((item): item is ActionParseTodo => Boolean(item)),
+      buildTodoKey
+    ),
+    shoppingItems: dedupeByKey(
+      shoppingItems
+        .map((item) => {
+          const record = asRecord(item);
+          const title = normalizeOptionalString(record.title) ?? "";
+          const confidence = normalizeConfidence(record.confidence);
+          if (!title || confidence === null) {
+            return null;
+          }
 
-        return {
-          id: crypto.randomUUID(),
-          title,
-          notes: normalizeOptionalString(record.notes),
-          confidence,
-          confidenceReasons: normalizeStringArray(record.confidenceReasons),
-          source: normalizeOptionalString(record.source)
-        } satisfies ActionParseShoppingItem;
-      })
-      .filter((item): item is ActionParseShoppingItem => Boolean(item)),
-    events: events
-      .map((item) => {
-        const record = asRecord(item);
-        const title = normalizeOptionalString(record.title) ?? "";
-        const confidence = normalizeConfidence(record.confidence);
-        if (!title || confidence === null) {
-          return null;
-        }
+          return {
+            id: crypto.randomUUID(),
+            title,
+            notes: normalizeOptionalString(record.notes),
+            confidence,
+            confidenceReasons: normalizeStringArray(record.confidenceReasons),
+            source: normalizeOptionalString(record.source)
+          } satisfies ActionParseShoppingItem;
+        })
+        .filter((item): item is ActionParseShoppingItem => Boolean(item)),
+      buildShoppingItemKey
+    ),
+    events: dedupeByKey(
+      events
+        .map((item) => {
+          const record = asRecord(item);
+          const title = normalizeOptionalString(record.title) ?? "";
+          const confidence = normalizeConfidence(record.confidence);
+          if (!title || confidence === null) {
+            return null;
+          }
 
-        const startRecord = asRecord(record.start);
-        const endRecord = asRecord(record.end);
-        const startDateTime = normalizeDateTime(startRecord.dateTime);
-        const explicitEndDateTime = normalizeDateTime(endRecord.dateTime);
+          const startRecord = asRecord(record.start);
+          const endRecord = asRecord(record.end);
+          const startDateTime = normalizeDateTime(startRecord.dateTime);
+          const explicitEndDateTime = normalizeDateTime(endRecord.dateTime);
 
-        const locationRecord = asRecord(record.location);
-        return {
-          id: crypto.randomUUID(),
-          title,
-          description: normalizeOptionalString(record.description),
-          start: startDateTime
-            ? {
-                dateTime: startDateTime,
-                timeZone: normalizeOptionalString(startRecord.timeZone)
-              }
-            : undefined,
-          end: explicitEndDateTime
-            ? {
-                dateTime: explicitEndDateTime,
-                timeZone:
-                  normalizeOptionalString(endRecord.timeZone) ??
-                  normalizeOptionalString(startRecord.timeZone)
-              }
-            : undefined,
-          location: record.location
-            ? {
-                name: normalizeOptionalString(locationRecord.name),
-                address: normalizeOptionalString(locationRecord.address),
-                meetingUrl: normalizeOptionalString(locationRecord.meetingUrl)
-              }
-            : undefined,
-          recurrence: normalizeRecurrence(record.recurrence),
-          confidence,
-          confidenceReasons: normalizeStringArray(record.confidenceReasons),
-          source: normalizeOptionalString(record.source)
-        } satisfies ActionParseEvent;
-      })
-      .filter((item): item is ActionParseEvent => Boolean(item))
+          const locationRecord = asRecord(record.location);
+          return {
+            id: crypto.randomUUID(),
+            title,
+            description: normalizeOptionalString(record.description),
+            start: startDateTime
+              ? {
+                  dateTime: startDateTime,
+                  timeZone: normalizeOptionalString(startRecord.timeZone)
+                }
+              : undefined,
+            end: explicitEndDateTime
+              ? {
+                  dateTime: explicitEndDateTime,
+                  timeZone:
+                    normalizeOptionalString(endRecord.timeZone) ??
+                    normalizeOptionalString(startRecord.timeZone)
+                }
+              : undefined,
+            location: record.location
+              ? {
+                  name: normalizeOptionalString(locationRecord.name),
+                  address: normalizeOptionalString(locationRecord.address),
+                  meetingUrl: normalizeOptionalString(locationRecord.meetingUrl)
+                }
+              : undefined,
+            recurrence: normalizeRecurrence(record.recurrence),
+            confidence,
+            confidenceReasons: normalizeStringArray(record.confidenceReasons),
+            source: normalizeOptionalString(record.source)
+          } satisfies ActionParseEvent;
+        })
+        .filter((item): item is ActionParseEvent => Boolean(item)),
+      buildEventKey
+    )
   };
 };
